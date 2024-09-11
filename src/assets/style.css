@@ -1,0 +1,71 @@
+:root {
+    --bg-color-light: #fff;
+    --bg-color-dark: #343a40;
+    --text-color-light: #000;
+    --text-color-dark: #fff;
+  }
+  
+  [data-theme="light"] {
+    --bg-color: var(--bg-color-light);
+    --text-color: var(--text-color-light);
+  }
+  
+  [data-theme="dark"] {
+    --bg-color: var(--bg-color-dark);
+    --text-color: var(--text-color-dark);
+  }
+  
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+  }
+  
+  .b-card, .b-card-header, .table {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+  }
+
+  .table {
+    background-color: var(--bg-color) !important; /* Применяем фон из переменной */
+    color: var(--text-color) !important; /* Применяем текстовый цвет из переменной */
+  }
+  
+  .table th,
+  .table td {
+    background-color: var(--bg-color) !important; /* Ячейки таблицы */
+    color: var(--text-color) !important; /* Цвет текста в ячейках */
+  }
+  
+  .table-dark th,
+  .table-dark td {
+    background-color: var(--bg-color-dark) !important;
+    color: var(--text-color-dark) !important;
+  }
+
+  .b-card,
+.b-card-header,
+.b-card-body,
+.b-row,
+.b-col,
+.theme-switcher {
+  background-color: var(--bg-color) !important;
+  color: var(--text-color) !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Применяем стили для всех элементов, включая div */
+div {
+  background-color: var(--bg-color) !important;
+  color: var(--text-color) !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.theme-switcher {
+    position: fixed; /* Зафиксировано относительно окна */
+    top: 10px;      /* Отступ сверху */
+    right: 10px;    /* Отступ справа */
+    z-index: 1000;  /* Высокий z-index, чтобы он был над другими элементами */
+    background-color: var(--bg-color); /* Цвет переключателя в зависимости от темы */
+    border: 1px solid var(--text-color); /* Граница, чтобы переключатель был виден */
+    padding: 5px; /* Небольшие отступы внутри переключателя */
+    border-radius: 10px; /* Закругленные углы для стиля */
+  }
