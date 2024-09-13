@@ -34,33 +34,33 @@
               <table class="min-w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200">
                 <thead>
                   <tr>
-                    <th class="border-b p-4 text-left">Issue Key</th>
-                    <th class="border-b p-4 text-left">Master Commits</th>
-                    <th class="border-b p-4 text-left">Release Commits</th>
+                    <th class="border-b p-4 text-left text-center">Issue Key</th>
+                    <th class="border-b p-4 text-left text-center">Master Commits</th>
+                    <th class="border-b p-4 text-left text-center">Release Commits</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="task in masterTasks" :key="task.key" class="border-b">
-                    <td class="p-4">
-                      <a :href="`https://job-jira.otr.ru/browse/${task.key}`" target="_blank" class="text-blue-500 hover:underline">
+                    <td class="p-4 text-center">
+                      <button @click="openLink(`https://job-jira.otr.ru/browse/${task.key}`)" class="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500">
                         {{ task.key }}
-                      </a>
+                      </button>
                     </td>
-                    <td class="p-4">
-                      <ul class="list-disc list-inside">
+                    <td class="p-4 text-center">
+                      <ul class="list-none space-y-2">
                         <li v-for="commit in task.commits" :key="commit.mrNumber">
-                          <a :href="`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`" target="_blank" class="text-blue-500 hover:underline">
+                          <button @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             MR #{{ commit.mrNumber }}
-                          </a>
+                          </button>
                         </li>
                       </ul>
                     </td>
-                    <td class="p-4">
-                      <ul class="list-disc list-inside">
+                    <td class="p-4 text-center">
+                      <ul class="list-none space-y-2">
                         <li v-for="commit in task.releaseCommits" :key="commit.mrNumber">
-                          <a :href="`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`" target="_blank" class="text-green-500 hover:underline">
+                          <button @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500">
                             MR #{{ commit.mrNumber }}
-                          </a>
+                          </button>
                         </li>
                       </ul>
                     </td>
@@ -116,6 +116,9 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    openLink(url) {
+      window.open(url, '_blank');
     }
   },
   mounted() {
@@ -129,9 +132,5 @@ export default {
 .toggle-switch {
   width: 40px;
   height: 20px;
-}
-
-.dark .toggle-switch {
-  background-color: #4a5568;
 }
 </style>
