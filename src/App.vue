@@ -1,7 +1,7 @@
 <template>
-  <b-container>
-    <router-view></router-view>
-  </b-container>
+<div class="container mx-auto">
+  <router-view></router-view>
+</div>
 </template>
 
 <script>

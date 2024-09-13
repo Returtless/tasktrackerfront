@@ -1,68 +1,79 @@
 <template>
-  <b-container fluid>
-    <!-- Theme switcher in top-right corner -->
-    <b-form-checkbox 
-      v-model="isDarkMode" 
-      switch
-      class="theme-switcher"
-    >
-    </b-form-checkbox>
+  <div :class="isDarkMode ? 'dark' : ''">
+    <!-- Theme Switcher -->
+    <div class="fixed top-2 right-2">
+      <input type="checkbox" v-model="isDarkMode" class="toggle-switch">
+    </div>
 
-    <b-row class="justify-content-center mt-4">
-      <b-col md="8">
-        <b-card>
-          <b-card-header>
-            <h1 class="text-center mb-0">Commits Page</h1>
-          </b-card-header>
-
-          <b-card-body>
-            <!-- Loading spinner -->
-            <div class="text-center mb-3">
-              <b-spinner v-if="loading" type="grow" variant="primary"></b-spinner>
+    <!-- Main Container -->
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
+      <div class="container mx-auto py-8 px-4">
+        <div class="max-w-4xl mx-auto">
+          <!-- Card Wrapper -->
+          <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg">
+            <!-- Header -->
+            <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg">
+              <h1 class="text-center text-xl font-bold">Commits Page</h1>
             </div>
 
-            <!-- Error message -->
-            <b-alert v-if="error" variant="danger" dismissible class="text-center">
-              {{ error }}
-            </b-alert>
+            <!-- Loading Spinner -->
+            <div class="p-4 text-center" v-if="loading">
+              <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+            </div>
 
-            <!-- Table with dynamic dark/light mode -->
-            <b-table 
-              v-if="!loading && !error" 
-              :items="masterTasks" 
-              :fields="fields" 
-              hover 
-              responsive 
-            >
-              <template #cell(issues)="data">
-                <b-button variant="link" :href="`https://job-jira.otr.ru/browse/${data.item.key}`" target="_blank">
-                  {{ data.item.key }}
-                </b-button>
-              </template>
-              <template #cell(masterCommits)="data">
-                <b-table :items="data.item.commits" :fields="commitFields" small responsive>
-                  <template #cell(commit)="data">
-                    <b-button variant="outline-primary" :href="`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${data.item.mrNumber}`" target="_blank">
-                      MR #{{ data.item.mrNumber }}
-                    </b-button>
-                  </template>
-                </b-table>
-              </template>
-              <template #cell(releaseCommits)="data">
-                <b-table :items="data.item.releaseCommits" :fields="commitFields" small responsive>
-                  <template #cell(commit)="data">
-                    <b-button variant="outline-success" :href="`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${data.item.mrNumber}`" target="_blank">
-                      MR #{{ data.item.mrNumber }}
-                    </b-button>
-                  </template>
-                </b-table>
-              </template>
-            </b-table>
-          </b-card-body>
-        </b-card>
-      </b-col>
-    </b-row>
-  </b-container>
+            <!-- Error Message -->
+            <div v-if="error" class="text-center text-red-500 p-4">
+              {{ error }}
+            </div>
+
+            <!-- Data Table -->
+            <div v-if="!loading && !error">
+              <table class="min-w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200">
+                <thead>
+                  <tr>
+                    <th class="border-b p-4 text-left">Issue Key</th>
+                    <th class="border-b p-4 text-left">Master Commits</th>
+                    <th class="border-b p-4 text-left">Release Commits</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="task in masterTasks" :key="task.key" class="border-b">
+                    <td class="p-4">
+                      <a :href="`https://job-jira.otr.ru/browse/${task.key}`" target="_blank" class="text-blue-500 hover:underline">
+                        {{ task.key }}
+                      </a>
+                    </td>
+                    <td class="p-4">
+                      <ul class="list-disc list-inside">
+                        <li v-for="commit in task.commits" :key="commit.mrNumber">
+                          <a :href="`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`" target="_blank" class="text-blue-500 hover:underline">
+                            MR #{{ commit.mrNumber }}
+                          </a>
+                        </li>
+                      </ul>
+                    </td>
+                    <td class="p-4">
+                      <ul class="list-disc list-inside">
+                        <li v-for="commit in task.releaseCommits" :key="commit.mrNumber">
+                          <a :href="`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`" target="_blank" class="text-green-500 hover:underline">
+                            MR #{{ commit.mrNumber }}
+                          </a>
+                        </li>
+                      </ul>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -72,23 +83,14 @@ export default {
   data() {
     return {
       masterTasks: [],
-      releaseTasks: [],
       loading: true,
       error: null,
-      isDarkMode: true, // Темная тема включена по умолчанию
-      fields: [
-        { key: 'issues', label: 'Issue Key' },
-        { key: 'masterCommits', label: 'Master Commits' },
-        { key: 'releaseCommits', label: 'Release Commits' }
-      ],
-      commitFields: [
-        { key: 'commit', label: 'Commit' }
-      ]
+      isDarkMode: false, // По умолчанию светлая тема
     };
   },
   watch: {
     isDarkMode(newVal) {
-      document.body.setAttribute('data-theme', newVal ? 'dark' : 'light');
+      document.body.classList.toggle('dark', newVal);
     }
   },
   methods: {
@@ -117,23 +119,19 @@ export default {
     }
   },
   mounted() {
-    document.body.setAttribute('data-theme', this.isDarkMode ? 'dark' : 'light');
     this.fetchCommits();
+    document.body.classList.toggle('dark', this.isDarkMode);
   }
 };
 </script>
 
 <style scoped>
-.theme-switcher {
-  position: fixed;
-  top: 10px;
-  right: 10px;
+.toggle-switch {
   width: 40px;
   height: 20px;
-  z-index: 1000;
 }
 
-.b-card, .table {
-  transition: background-color 0.3s, color 0.3s;
+.dark .toggle-switch {
+  background-color: #4a5568;
 }
 </style>
