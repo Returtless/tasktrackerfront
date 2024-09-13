@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.toggle-button {
+    background-color: #fff;
+    border: none;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  .toggle-button svg {
+    fill: #333;
+  }
+  
+  .dark .toggle-button svg {
+    fill: #fff;
+  }

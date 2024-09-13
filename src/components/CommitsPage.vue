@@ -2,11 +2,14 @@
   <div :class="isDarkMode ? 'dark' : ''">
     <!-- Theme Switcher -->
     <div class="fixed top-2 right-2">
-      <input type="checkbox" v-model="isDarkMode" class="toggle-switch">
+      <label class="switch">
+        <input type="checkbox" v-model="isDarkMode" />
+        <span class="slider"></span>
+      </label>
     </div>
 
     <!-- Main Container -->
-    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
+    <div class="min-h-screen text-gray-900 dark:text-gray-200 transition-colors duration-300">
       <div class="container mx-auto py-8 px-4">
         <div class="max-w-4xl mx-auto">
           <!-- Card Wrapper -->
@@ -35,6 +38,7 @@
                 <thead>
                   <tr>
                     <th class="border-b p-4 text-left text-center">Issue Key</th>
+                    <th class="border-b p-4 text-left text-center">Date</th>
                     <th class="border-b p-4 text-left text-center">Master Commits</th>
                     <th class="border-b p-4 text-left text-center">Release Commits</th>
                   </tr>
@@ -46,6 +50,7 @@
                         {{ task.key }}
                       </button>
                     </td>
+                    <td class="p-4 text-center">{{ new Date(task.date).toLocaleString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }) }}</td>
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
                         <li v-for="commit in task.commits" :key="commit.mrNumber">
@@ -68,7 +73,6 @@
                 </tbody>
               </table>
             </div>
-
           </div>
         </div>
       </div>
@@ -91,6 +95,8 @@ export default {
   watch: {
     isDarkMode(newVal) {
       document.body.classList.toggle('dark', newVal);
+      document.body.classList.toggle('bg-gray-100', !newVal); // Светлая тема
+      document.body.classList.toggle('bg-gray-900', newVal); // Темная тема
     }
   },
   methods: {
@@ -129,8 +135,53 @@ export default {
 </script>
 
 <style scoped>
-.toggle-switch {
-  width: 40px;
-  height: 20px;
+/* Toggle switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #4caf50;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.dark input:checked + .slider {
+  background-color: #000;
 }
 </style>
