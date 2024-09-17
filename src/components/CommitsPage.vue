@@ -53,9 +53,18 @@
                     <td class="p-4 text-center">{{ new Date(task.date).toLocaleString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }) }}</td>
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li v-for="commit in task.commits" :key="commit.mrNumber">
+                        <li v-for="commit in task.commits" :key="commit.mrNumber" class="relative">
                           <button @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             MR #{{ commit.mrNumber }}
+                          </button>
+                          <!-- Кнопка со стрелочкой вправо -->
+                          <button
+                            v-if="task.releaseCommits.length === 0"
+                            @click="sendCherryPickRequest(commit.mrNumber, task.key)"
+                            class="absolute right-0 top-0 mt-1 ml-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-1 px-2 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400"
+                            title="Cherry-pick commit"
+                          >
+                            →
                           </button>
                         </li>
                       </ul>
@@ -104,8 +113,8 @@ export default {
       try {
         const response = await axios.get('http://localhost:8080/api/commits', {
           params: {
-            since: '01.09.2024',
-            key: 'SUF-5045'
+            since: '25.08.2024',
+            key: 'SUF-5047'
           }
         });
         const { masterTasks, releaseTasks } = response.data;
@@ -125,6 +134,17 @@ export default {
     },
     openLink(url) {
       window.open(url, '_blank');
+    },
+    async sendCherryPickRequest(mrNumber, taskKey) {
+      try {
+        await axios.post('http://localhost:8080/api/cherrypick', null, {
+          params: { mrNumber, taskKey },
+        });
+        alert(`Cherry-pick request sent for MR #${mrNumber}`);
+      } catch (error) {
+        console.error('Error sending cherry-pick request:', error);
+        alert('Error sending cherry-pick request.');
+      }
     }
   },
   mounted() {
@@ -183,5 +203,10 @@ input:checked + .slider:before {
 
 .dark input:checked + .slider {
   background-color: #000;
+}
+
+/* Кнопка со стрелочкой */
+button[title="Cherry-pick commit"] {
+  font-size: 12px;
 }
 </style>
