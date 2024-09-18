@@ -9,7 +9,7 @@
     </div>
 
     <!-- Main Container -->
-    <div class="min-h-screen text-gray-900 dark:text-gray-200 transition-colors duration-300">
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
       <div class="container mx-auto py-8 px-4">
         <div class="max-w-4xl mx-auto">
           <!-- Card Wrapper -->
@@ -20,7 +20,7 @@
             </div>
 
             <!-- Loading Spinner -->
-            <div class="p-4 text-center" v-if="loading">
+            <div class="p-4 text-center" v-if="tasksStore.loading">
               <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
@@ -28,12 +28,12 @@
             </div>
 
             <!-- Error Message -->
-            <div v-if="error" class="text-center text-red-500 p-4">
-              {{ error }}
+            <div v-if="tasksStore.error" class="text-center text-red-500 p-4">
+              {{ tasksStore.error }}
             </div>
 
             <!-- Data Table -->
-            <div v-if="!loading && !error">
+            <div v-if="!tasksStore.loading && !tasksStore.error">
               <table class="min-w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200">
                 <thead>
                   <tr>
@@ -41,34 +41,30 @@
                     <th class="border-b p-4 text-left text-center">Date</th>
                     <th class="border-b p-4 text-left text-center">Master Commits</th>
                     <th class="border-b p-4 text-left text-center">Release Commits</th>
+                    <th class="border-b p-4 text-left text-center">Cherry-pick</th> <!-- Новый столбец для кнопки -->
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="task in masterTasks" :key="task.key" class="border-b">
+                  <tr v-for="task in tasksStore.masterTasks" :key="task.key" class="border-b">
                     <td class="p-4 text-center">
                       <button @click="openLink(`https://job-jira.otr.ru/browse/${task.key}`)" class="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500">
                         {{ task.key }}
                       </button>
                     </td>
                     <td class="p-4 text-center">{{ new Date(task.date).toLocaleString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }) }}</td>
+
+                    <!-- Столбец Master Commits -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
                         <li v-for="commit in task.commits" :key="commit.mrNumber" class="relative">
                           <button @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             MR #{{ commit.mrNumber }}
                           </button>
-                          <!-- Кнопка со стрелочкой вправо -->
-                          <button
-                            v-if="task.releaseCommits.length === 0"
-                            @click="sendCherryPickRequest(commit.mrNumber, task.key)"
-                            class="absolute right-0 top-0 mt-1 ml-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-1 px-2 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400"
-                            title="Cherry-pick commit"
-                          >
-                            →
-                          </button>
                         </li>
                       </ul>
                     </td>
+
+                    <!-- Столбец Release Commits -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
                         <li v-for="commit in task.releaseCommits" :key="commit.mrNumber">
@@ -78,6 +74,20 @@
                         </li>
                       </ul>
                     </td>
+
+                    <!-- Столбец для кнопки Cherry-pick -->
+                    <td class="p-4 text-center">
+                      <!-- Отдельная кнопка для Cherry-pick -->
+                      <button
+                        v-if="task.releaseCommits.length === 0"
+                        @click="sendCherryPickRequest(task.commits[0].mrNumber, task.key)"
+                        class="bg-gray-500 text-white py-2 px-4 rounded-full hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-300"
+                        title="Cherry-pick commit"
+                      >
+                        Cherry-pick
+                      </button>
+                    </td>
+
                   </tr>
                 </tbody>
               </table>
@@ -90,67 +100,39 @@
 </template>
 
 <script>
-import axios from 'axios';
+import { useTasksStore } from '@/stores/commitsStore'
+import { ref, watch } from 'vue';
 
 export default {
-  data() {
-    return {
-      masterTasks: [],
-      loading: true,
-      error: null,
-      isDarkMode: false, // По умолчанию светлая тема
-    };
-  },
-  watch: {
-    isDarkMode(newVal) {
-      document.body.classList.toggle('dark', newVal);
-      document.body.classList.toggle('bg-gray-100', !newVal); // Светлая тема
-      document.body.classList.toggle('bg-gray-900', newVal); // Темная тема
-    }
+  setup() {
+    const tasksStore = useTasksStore();
+    tasksStore.fetchCommits();
+
+    const isDarkMode = ref(false);
+
+    // Watcher для обновления темы
+    watch(isDarkMode, (newVal) => {
+      if (newVal) {
+        document.body.classList.add('dark');
+        document.body.classList.remove('bg-gray-100');
+        document.body.classList.add('bg-gray-900');
+      } else {
+        document.body.classList.remove('dark');
+        document.body.classList.add('bg-gray-100');
+        document.body.classList.remove('bg-gray-900');
+      }
+    });
+
+    return { tasksStore, isDarkMode };
   },
   methods: {
-    async fetchCommits() {
-      try {
-        const response = await axios.get('http://localhost:8080/api/commits', {
-          params: {
-            since: '25.08.2024',
-            key: 'SUF-5047'
-          }
-        });
-        const { masterTasks, releaseTasks } = response.data;
-
-        const releaseTasksMap = new Map();
-        releaseTasks.forEach(task => releaseTasksMap.set(task.key, task.commits));
-
-        this.masterTasks = masterTasks.map(task => ({
-          ...task,
-          releaseCommits: releaseTasksMap.get(task.key) || []
-        }));
-      } catch (error) {
-        this.error = 'Error fetching commits: ' + error.message;
-      } finally {
-        this.loading = false;
-      }
-    },
     openLink(url) {
       window.open(url, '_blank');
     },
-    async sendCherryPickRequest(mrNumber, taskKey) {
-      try {
-        await axios.post('http://localhost:8080/api/cherrypick', null, {
-          params: { mrNumber, taskKey },
-        });
-        alert(`Cherry-pick request sent for MR #${mrNumber}`);
-      } catch (error) {
-        console.error('Error sending cherry-pick request:', error);
-        alert('Error sending cherry-pick request.');
-      }
-    }
+    sendCherryPickRequest(mrNumber, taskKey) {
+      this.tasksStore.sendCherryPickRequest(mrNumber, taskKey);
+    },
   },
-  mounted() {
-    this.fetchCommits();
-    document.body.classList.toggle('dark', this.isDarkMode);
-  }
 };
 </script>
 
@@ -205,8 +187,9 @@ input:checked + .slider:before {
   background-color: #000;
 }
 
-/* Кнопка со стрелочкой */
+/* Кнопка Cherry-pick */
 button[title="Cherry-pick commit"] {
-  font-size: 12px;
+  font-size: 14px;
+  padding: 0.75rem 1rem;
 }
 </style>
