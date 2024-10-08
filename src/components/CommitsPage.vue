@@ -9,7 +9,8 @@
     </div>
 
     <!-- Main Container -->
-    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
+    <div
+      class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
       <div class="container mx-auto py-8 px-4">
         <div class="max-w-4xl mx-auto">
           <!-- Card Wrapper -->
@@ -21,7 +22,8 @@
 
             <!-- Loading Spinner -->
             <div class="p-4 text-center" v-if="tasksStore.loading">
-              <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
               </svg>
@@ -47,17 +49,22 @@
                 <tbody>
                   <tr v-for="task in tasksStore.masterTasks" :key="task.key" class="border-b">
                     <td class="p-4 text-center">
-                      <button @click="openLink(`https://job-jira.otr.ru/browse/${task.key}`)" class="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                      <button @click="openLink(`https://job-jira.otr.ru/browse/${task.key}`)"
+                        class="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500">
                         {{ task.key }}
                       </button>
                     </td>
-                    <td class="p-4 text-center">{{ new Date(task.date).toLocaleString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }) }}</td>
+                    <td class="p-4 text-center">{{ new Date(task.date).toLocaleString('ru-RU', { year: 'numeric', month:
+                      'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }) }}</td>
 
                     <!-- Столбец Master Commits -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li v-for="commit in task.commits" :key="commit.mrNumber" class="relative">
-                          <button @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <li v-for="[, commit] in Object.entries(task.commits).sort((a, b) => a[0] - b[0])"
+                          :key="commit.mrNumber" class="relative">
+                          <button
+                            @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)"
+                            class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             MR #{{ commit.mrNumber }}
                           </button>
                         </li>
@@ -67,8 +74,14 @@
                     <!-- Столбец Release Commits -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li v-for="commit in task.releaseCommits" :key="commit.mrNumber">
-                          <button @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <li v-for="[, commit] in Object.entries(task.releaseCommits).sort((a, b) => a[0] - b[0])"
+                          :key="commit ? commit.mrNumber : null" class="relative"
+                          :style="{ height: commit ? 'auto' : '40px' }">
+                          <button v-if="commit" :class="[
+                            Object.keys(task.commits).length !== Object.keys(task.releaseCommits).length ? 'bg-red-500 focus:ring-red-500 hover:bg-red-600' : 'bg-green-500 focus:ring-green-500 hover:bg-green-600',
+                            'text-white py-2 px-4 rounded focus:outline-none focus:ring-2'
+                          ]" @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)"
+                            class="">
                             MR #{{ commit.mrNumber }}
                           </button>
                         </li>
@@ -77,15 +90,17 @@
 
                     <!-- Столбец для кнопки Cherry-pick -->
                     <td class="p-4 text-center">
-                      <!-- Отдельная кнопка для Cherry-pick -->
-                      <button
-                        v-if="task.releaseCommits.length === 0"
-                        @click="sendCherryPickRequest(task.commits[0].mrNumber, task.key)"
-                        class="bg-gray-500 text-white py-2 px-4 rounded-full hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-300"
-                        title="Cherry-pick commit"
-                      >
-                        Cherry-pick
-                      </button>
+                      <ul class="list-none space-y-2">
+                        <li v-for="[, commit] in Object.entries(task.commits).sort((a, b) => a[0] - b[0])"
+                          :key="commit.mrNumber" class="relative">
+                          <button v-if="task.releaseCommits.length === 0"
+                            @click="sendCherryPickRequest(commit.mrNumber, task.key)"
+                            class="bg-gray-500 text-white py-2 px-4 rounded-full hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-300"
+                            title="Cherry-pick commit">
+                            Cherry-pick
+                          </button>
+                        </li>
+                      </ul>
                     </td>
 
                   </tr>

@@ -16,7 +16,7 @@ export const useTasksStore = defineStore('tasksStore', {
         const response = await axios.get('http://localhost:8080/api/commits', {
           params: {
             since: '25.08.2024',
-            key: 'SUF-5047',
+            key: 'SUF-5049',
           },
         });
         const { masterTasks, releaseTasks } = response.data;
