@@ -7,6 +7,7 @@ export const useTasksStore = defineStore('tasksStore', {
   state: () => ({
     masterTasks: [],
     loading: false,
+    loadingButton: false,
     error: null,
   }),
 
@@ -17,8 +18,8 @@ export const useTasksStore = defineStore('tasksStore', {
       try {
         const response = await axios.get('http://localhost:8080/api/commits', {
           params: {
-            since: '25.08.2024',
-            key: 'SUF-5049',
+            since: '21.11.2024',
+            key: 'SUF-6177',
           },
         });
         const { masterTasks, releaseTasks } = response.data;
@@ -43,6 +44,8 @@ export const useTasksStore = defineStore('tasksStore', {
     },
 
     async sendCherryPickRequest(mrNumber, taskKey) {
+      this.loadingButton = true;
+      console.log('loadingButton', this.loadingButton );
       try {
         const response = await axios.post('http://localhost:8080/api/cherrypick', null, {
           params: { mrNumber, taskKey },
@@ -76,6 +79,9 @@ export const useTasksStore = defineStore('tasksStore', {
           type: 'error'
         });
         console.error('Error sending cherry-pick request:', error);
+      } finally {
+        this.loadingButton = false; // Установите loading в false после завершения запроса
+        console.log('loadingButton', this.loadingButton );
       }
     },
   },

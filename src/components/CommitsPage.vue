@@ -18,6 +18,17 @@
             <!-- Header -->
             <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg">
               <h1 class="text-center text-xl font-bold">Commits Page</h1>
+              <!-- Filters -->
+              <div class="flex justify-end mt-2">
+                <input
+                  v-model="authorFilter"
+                  class="border p-2 rounded mr-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
+                  placeholder="Filter by Author"
+                />
+                <button @click="toggleDateSort" class="bg-gray-300 p-2 rounded hover:bg-gray-400">
+                  Sort by Date ({{ sortDirection.date }})
+                </button>
+              </div>
             </div>
 
             <!-- Loading Spinner -->
@@ -42,67 +53,103 @@
                     <th class="border-b p-4 text-left text-center">Issue Key</th>
                     <th class="border-b p-4 text-left text-center">Date</th>
                     <th class="border-b p-4 text-left text-center">Master Commits</th>
+                    <th class="border-b p-4 text-left text-center">Author</th>
                     <th class="border-b p-4 text-left text-center">Release Commits</th>
-                    <th class="border-b p-4 text-left text-center">Cherry-pick</th> <!-- Новый столбец для кнопки -->
+                    <th class="border-b p-4 text-left text-center">Cherry-pick</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="task in tasksStore.masterTasks" :key="task.key" class="border-b">
+                  <tr v-for="task in filteredTasks" :key="task.key" class="border-b">
                     <td class="p-4 text-center">
                       <button @click="openLink(`https://job-jira.otr.ru/browse/${task.key}`)"
-                        class="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        class="bg-orange-500 text-white px-2 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500">
                         {{ task.key }}
                       </button>
                     </td>
-                    <td class="p-4 text-center">{{ new Date(task.date).toLocaleString('ru-RU', { year: 'numeric', month:
-                      'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }) }}</td>
+                    <td class="p-4 text-center whitespace-nowrap">
+                      {{ new Date(task.date).toLocaleString('ru-RU', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: 'numeric',
+                        second: 'numeric',
+                      }) }}
+                    </td>
 
-                    <!-- Столбец Master Commits -->
+                    <!-- Master Commits -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li v-for="[, commit] in Object.entries(task.commits).sort((a, b) => a[0] - b[0])"
-                          :key="commit.mrNumber" class="relative">
+                        <li
+                          v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
+                          :key="commit?.mrNumber || Math.random()"
+                          class="relative">
                           <button
+                            v-if="commit?.mrNumber"
                             @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)"
-                            class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            class="bg-blue-500 text-white px-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            MR #{{ commit?.mrNumber }}
+                          </button>
+                        </li>
+                      </ul>
+                    </td>
+
+                    <!-- Author -->
+                    <td class="p-4 text-center align-middle">
+                      <ul class="list-none space-y-2">
+                        <li
+                          v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
+                          :key="commit?.mrNumber || Math.random()"
+                          class="whitespace-nowrap">
+                          {{ commit?.commit?.authorEmail?.split('@')[0] || 'Unknown' }}
+                        </li>
+                      </ul>
+                    </td>
+
+                    <!-- Release Commits -->
+                    <td class="p-4 text-center">
+                      <ul class="list-none space-y-2">
+                        <li
+                          v-for="commit in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
+                          :key="commit?.mrNumber || Math.random()"
+                          class="relative">
+                          <button
+                            v-if="commit?.mrNumber"
+                            :class="[
+                              Object.keys(task.commits || {}).length !==
+                              Object.keys(task.releaseCommits || {}).length
+                                ? 'bg-red-500 focus:ring-red-500 hover:bg-red-600'
+                                : 'bg-green-500 focus:ring-green-500 hover:bg-green-600',
+                              'text-white px-2 rounded focus:outline-none focus:ring-2',
+                            ]"
+                            @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)">
                             MR #{{ commit.mrNumber }}
                           </button>
                         </li>
                       </ul>
                     </td>
 
-                    <!-- Столбец Release Commits -->
+                    <!-- Cherry-pick -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li v-for="[, commit] in Object.entries(task.releaseCommits).sort((a, b) => a[0] - b[0])"
-                          :key="commit ? commit.mrNumber : null" class="relative"
-                          :style="{ height: commit ? 'auto' : '40px' }">
-                          <button v-if="commit" :class="[
-                            Object.keys(task.commits).length !== Object.keys(task.releaseCommits).length ? 'bg-red-500 focus:ring-red-500 hover:bg-red-600' : 'bg-green-500 focus:ring-green-500 hover:bg-green-600',
-                            'text-white py-2 px-4 rounded focus:outline-none focus:ring-2'
-                          ]" @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)"
-                            class="">
-                            MR #{{ commit.mrNumber }}
+                        <li
+                          v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
+                          :key="commit?.mrNumber || Math.random()"
+                          class="relative">
+                          <button
+                            v-if="task.releaseCommits?.length === 0"
+                            :class="[
+                              'bg-gray-500 text-white px-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-300',
+                              tasksStore.loadingButton ? 'animate-pulse' : '',
+                            ]"
+                            :disabled="tasksStore.loadingButton"
+                            @click="tasksStore.sendCherryPickRequest(commit.mrNumber, task.key)">
+                            <span v-if="tasksStore.loadingButton">Ожидание...</span>
+                            <span v-else>Cherry-pick</span>
                           </button>
                         </li>
                       </ul>
                     </td>
-
-                    <!-- Столбец для кнопки Cherry-pick -->
-                    <td class="p-4 text-center">
-                      <ul class="list-none space-y-2">
-                        <li v-for="[, commit] in Object.entries(task.commits).sort((a, b) => a[0] - b[0])"
-                          :key="commit.mrNumber" class="relative">
-                          <button v-if="task.releaseCommits.length === 0"
-                            @click="sendCherryPickRequest(commit.mrNumber, task.key)"
-                            class="bg-gray-500 text-white py-2 px-4 rounded-full hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-300"
-                            title="Cherry-pick commit">
-                            Cherry-pick
-                          </button>
-                        </li>
-                      </ul>
-                    </td>
-
                   </tr>
                 </tbody>
               </table>
@@ -115,8 +162,8 @@
 </template>
 
 <script>
-import { useTasksStore } from '@/stores/commitsStore'
-import { ref, watch } from 'vue';
+import { useTasksStore } from '@/stores/commitsStore';
+import { ref, watch, computed } from 'vue';
 
 export default {
   setup() {
@@ -124,6 +171,49 @@ export default {
     tasksStore.fetchCommits();
 
     const isDarkMode = ref(false);
+    const authorFilter = ref('');
+    const sortKey = ref(null);
+    const sortDirection = ref({ date: 'asc' });
+
+    const filteredCommits = (commits) => {
+      if (!commits) {
+        console.error('Commits object is undefined or null:', commits);
+        return [];
+      }
+      const result = Object.values(commits).filter(
+        (commit) =>
+          authorFilter.value === '' ||
+          commit?.commit?.authorEmail?.toLowerCase().includes(authorFilter.value.toLowerCase())
+      );
+      return result;
+    };
+
+    const filteredTasks = computed(() => {
+      let tasks = tasksStore.masterTasks;
+      if (!tasks) {
+        console.error('Tasks are undefined or null:', tasks);
+        return [];
+      }
+      if (authorFilter.value) {
+        tasks = tasks.filter((task) => {
+          const hasValidCommits = Object.values(task.commits || {}).some((commit) =>
+            commit?.commit?.authorEmail?.toLowerCase().includes(authorFilter.value.toLowerCase())
+          );
+          return hasValidCommits;
+        });
+      }
+      if (sortKey.value) {
+        tasks = tasks.slice().sort((a, b) => {
+          if (sortKey.value === 'date') {
+            return sortDirection.value.date === 'asc'
+              ? new Date(a.date) - new Date(b.date)
+              : new Date(b.date) - new Date(a.date);
+          }
+          return 0;
+        });
+      }
+      return tasks;
+    });
 
     // Watcher для обновления темы
     watch(isDarkMode, (newVal) => {
@@ -138,7 +228,20 @@ export default {
       }
     });
 
-    return { tasksStore, isDarkMode };
+    function toggleDateSort() {
+      sortDirection.value.date = sortDirection.value.date === 'asc' ? 'desc' : 'asc';
+      sortKey.value = 'date';
+    }
+
+    return {
+      tasksStore,
+      isDarkMode,
+      authorFilter,
+      filteredTasks,
+      toggleDateSort,
+      filteredCommits,
+      sortDirection,
+    };
   },
   methods: {
     openLink(url) {
@@ -180,7 +283,7 @@ export default {
 
 .slider:before {
   position: absolute;
-  content: "";
+  content: '';
   height: 26px;
   width: 26px;
   left: 4px;
@@ -202,9 +305,25 @@ input:checked + .slider:before {
   background-color: #000;
 }
 
-/* Кнопка Cherry-pick */
-button[title="Cherry-pick commit"] {
-  font-size: 14px;
-  padding: 0.75rem 1rem;
+button {
+  display: inline-block;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.animate-pulse {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 </style>
