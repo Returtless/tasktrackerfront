@@ -19,15 +19,31 @@
             <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg">
               <h1 class="text-center text-xl font-bold">Commits Page</h1>
               <!-- Filters -->
-              <div class="flex justify-end mt-2">
-                <input
-                  v-model="authorFilter"
-                  class="border p-2 rounded mr-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
-                  placeholder="Filter by Author"
-                />
-                <button @click="toggleDateSort" class="bg-gray-300 p-2 rounded hover:bg-gray-400">
-                  Sort by Date ({{ sortDirection.date }})
-                </button>
+              <div class="flex justify-between mt-2">
+                <div class="flex items-center space-x-4">
+                  <input
+                    v-model="authorFilter"
+                    class="border p-2 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
+                    placeholder="Filter by Author"
+                  />
+                  <button @click="toggleDateSort" class="bg-gray-300 p-2 rounded hover:bg-gray-400">
+                    Sort by Date ({{ sortDirection.date }})
+                  </button>
+                </div>
+                <button
+  :disabled="tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton"
+  @click="tasksStore.sendCherryPickList"
+  :class="[
+    'text-white px-4 py-2 rounded focus:outline-none focus:ring-2 transition-all duration-300',
+    tasksStore.loadingListButton
+      ? 'bg-green-500 animate-pulse'
+      : 'bg-green-500 hover:bg-green-600 focus:ring-green-400',
+    tasksStore.isCherryPickListButtonDisabled ? 'opacity-50 cursor-not-allowed' : ''
+  ]"
+>
+  <span v-if="tasksStore.loadingListButton">Ожидание...</span>
+  <span v-else>Cherry-pick Selected</span>
+</button>
               </div>
             </div>
 
@@ -47,19 +63,33 @@
 
             <!-- Data Table -->
             <div v-if="!tasksStore.loading && !tasksStore.error">
-              <table class="min-w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200">
+              <table class="min-w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200" style="table-layout: fixed;">
                 <thead>
                   <tr>
-                    <th class="border-b p-4 text-left text-center">Issue Key</th>
-                    <th class="border-b p-4 text-left text-center">Date</th>
-                    <th class="border-b p-4 text-left text-center">Master Commits</th>
-                    <th class="border-b p-4 text-left text-center">Author</th>
-                    <th class="border-b p-4 text-left text-center">Release Commits</th>
-                    <th class="border-b p-4 text-left text-center">Cherry-pick</th>
+                    <th class="border-b p-4 text-left w-1/12">Select</th>
+                    <th class="border-b p-4 text-left w-2/12">Issue Key</th>
+                    <th class="border-b p-4 text-left w-2/12">Date</th>
+                    <th class="border-b p-4 text-left w-3/12">Master Commits</th>
+                    <th class="border-b p-4 text-left w-2/12">Author</th>
+                    <th class="border-b p-4 text-left w-3/12">Release Commits</th>
+                    <th class="border-b p-4 text-left w-2/12">Cherry-pick</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="task in filteredTasks" :key="task.key" class="border-b">
+                    <td class="p-4 text-center">
+                      <ul class="list-none space-y-2">
+                        <li
+                          v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
+                          :key="commit?.mrNumber || Math.random()">
+                          <input
+                            type="checkbox"
+                            :checked="tasksStore.selectedCommits?.has(commit?.mrNumber)"
+                            @change="commit?.mrNumber && tasksStore.toggleCommitSelection(commit.mrNumber)"
+                          />
+                        </li>
+                      </ul>
+                    </td>
                     <td class="p-4 text-center">
                       <button @click="openLink(`https://job-jira.otr.ru/browse/${task.key}`)"
                         class="bg-orange-500 text-white px-2 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500">
@@ -67,14 +97,7 @@
                       </button>
                     </td>
                     <td class="p-4 text-center whitespace-nowrap">
-                      {{ new Date(task.date).toLocaleString('ru-RU', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: 'numeric',
-                        second: 'numeric',
-                      }) }}
+                      {{ new Date(task.date).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '') }}
                     </td>
 
                     <!-- Master Commits -->
@@ -143,7 +166,7 @@
                               tasksStore.loadingButton ? 'animate-pulse' : '',
                             ]"
                             :disabled="tasksStore.loadingButton"
-                            @click="tasksStore.sendCherryPickRequest(commit.mrNumber, task.key)">
+                            @click="tasksStore.sendCherryPickRequest(commit.mrNumber, task.key, $event)">
                             <span v-if="tasksStore.loadingButton">Ожидание...</span>
                             <span v-else>Cherry-pick</span>
                           </button>
@@ -163,7 +186,7 @@
 
 <script>
 import { useTasksStore } from '@/stores/commitsStore';
-import { ref, watch, computed } from 'vue';
+import { ref, computed } from 'vue';
 
 export default {
   setup() {
@@ -185,75 +208,60 @@ export default {
           authorFilter.value === '' ||
           commit?.commit?.authorEmail?.toLowerCase().includes(authorFilter.value.toLowerCase())
       );
+      console.log('Filtered Commits:', result);
       return result;
     };
 
     const filteredTasks = computed(() => {
       let tasks = tasksStore.masterTasks;
-      if (!tasks) {
-        console.error('Tasks are undefined or null:', tasks);
-        return [];
-      }
+
+      // Фильтрация по автору
       if (authorFilter.value) {
-        tasks = tasks.filter((task) => {
-          const hasValidCommits = Object.values(task.commits || {}).some((commit) =>
+        tasks = tasks.filter((task) =>
+          task.commits &&
+          Object.values(task.commits).some((commit) =>
             commit?.commit?.authorEmail?.toLowerCase().includes(authorFilter.value.toLowerCase())
-          );
-          return hasValidCommits;
-        });
+          )
+        );
       }
-      if (sortKey.value) {
+
+      // Сортировка по дате
+      if (sortKey.value === 'date') {
         tasks = tasks.slice().sort((a, b) => {
-          if (sortKey.value === 'date') {
-            return sortDirection.value.date === 'asc'
-              ? new Date(a.date) - new Date(b.date)
-              : new Date(b.date) - new Date(a.date);
-          }
-          return 0;
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          return sortDirection.value.date === 'asc'
+            ? dateA - dateB
+            : dateB - dateA;
         });
       }
       return tasks;
     });
 
-    // Watcher для обновления темы
-    watch(isDarkMode, (newVal) => {
-      if (newVal) {
-        document.body.classList.add('dark');
-        document.body.classList.remove('bg-gray-100');
-        document.body.classList.add('bg-gray-900');
-      } else {
-        document.body.classList.remove('dark');
-        document.body.classList.add('bg-gray-100');
-        document.body.classList.remove('bg-gray-900');
-      }
-    });
-
-    function toggleDateSort() {
-      sortDirection.value.date = sortDirection.value.date === 'asc' ? 'desc' : 'asc';
+    const toggleDateSort = () => {
+      sortDirection.value.date =
+        sortDirection.value.date === 'asc' ? 'desc' : 'asc';
       sortKey.value = 'date';
-    }
+    };
+
+    const openLink = (url) => {
+      window.open(url, '_blank');
+    };
 
     return {
       tasksStore,
       isDarkMode,
       authorFilter,
-      filteredTasks,
-      toggleDateSort,
-      filteredCommits,
+      sortKey,
       sortDirection,
+      filteredTasks,
+      filteredCommits,
+      toggleDateSort,
+      openLink,
     };
-  },
-  methods: {
-    openLink(url) {
-      window.open(url, '_blank');
-    },
-    sendCherryPickRequest(mrNumber, taskKey) {
-      this.tasksStore.sendCherryPickRequest(mrNumber, taskKey);
-    },
   },
 };
 </script>
-
 <style scoped>
 /* Toggle switch */
 .switch {
