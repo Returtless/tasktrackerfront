@@ -165,7 +165,7 @@
 
 <script>
 import { useTasksStore } from '@/stores/commitsStore';
-import { ref, computed } from 'vue';
+import { ref, watch, computed } from 'vue';
 import Multiselect from 'vue-multiselect';
 
 export default {
@@ -228,6 +228,18 @@ export default {
         });
       }
       return tasks;
+    });
+
+    watch(isDarkMode, (newVal) => {
+      if (newVal) {
+        document.body.classList.add('dark');
+        document.body.classList.remove('bg-gray-100');
+        document.body.classList.add('bg-gray-900');
+      } else {
+        document.body.classList.remove('dark');
+        document.body.classList.add('bg-gray-100');
+        document.body.classList.remove('bg-gray-900');
+      }
     });
 
     const toggleDateSort = () => {
