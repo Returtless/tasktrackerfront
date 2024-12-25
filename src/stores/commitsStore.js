@@ -9,6 +9,7 @@ export const useTasksStore = defineStore('tasksStore', {
     loadingButton: false,
     loadingListButton: false, // Для кнопки Cherry-pick Selected
     selectedCommits: new Set(),
+    selectedAuthors: [], // Для фильтрации по авторам
     error: null,
   }),
 
@@ -24,19 +25,6 @@ export const useTasksStore = defineStore('tasksStore', {
 
         const masterTasks = response.data.masterTasks;
         const releaseTasks = response.data.releaseTasks;
-
-        // Проверяем на наличие ошибок
-        const errorTasks = masterTasks.filter((task) => task.key === 'Error');
-        if (errorTasks.length > 0) {
-          errorTasks.forEach((errorTask) => {
-            showNotification({
-              title: 'Error',
-              text: errorTask.errorMessage || 'An unknown error occurred.',
-              type: 'error',
-            });
-          });
-          return;
-        }
 
         const releaseTasksMap = new Map();
         releaseTasks.forEach((task) => releaseTasksMap.set(task.key, task.commits));
@@ -115,32 +103,29 @@ export const useTasksStore = defineStore('tasksStore', {
         });
         return;
       }
-    
+
       this.loadingListButton = true;
-    
+
       try {
         const params = new URLSearchParams();
         Array.from(this.selectedCommits).forEach((mrNumber) => {
           params.append('mrNumbers', mrNumber);
         });
-    
+
         const response = await axios.post(
           `http://localhost:8080/api/cherrypicklist?${params.toString()}`
         );
-    
+
         const taskInfos = response.data;
-    
+
         // Проверяем на наличие ошибок
         const errorTasks = taskInfos.filter((task) => task.key === 'Error');
-    
+
         if (errorTasks.length > 0) {
-          // Выводим текст ошибки для каждого TaskInfo с ключом "Error"
           errorTasks.forEach((errorTask) => {
-            const errorMessage =
-              errorTask.errorMessage || 'An unknown error occurred.';
             showNotification({
               title: 'Error',
-              text: errorMessage,
+              text: errorTask.errorMessage || 'An unknown error occurred.',
               type: 'error',
             });
           });
@@ -154,10 +139,7 @@ export const useTasksStore = defineStore('tasksStore', {
           this.selectedCommits.clear();
         }
       } catch (error) {
-        const errorMessage =
-          error.response?.data?.map((err) => err.errorMessage).join(', ') ||
-          error.message ||
-          'Unknown error';
+        const errorMessage = error.response?.data?.errorMessage || error.message || 'Unknown error';
         showNotification({
           title: 'Error',
           text: `Error sending cherry-pick list request: ${errorMessage}`,
@@ -185,6 +167,17 @@ export const useTasksStore = defineStore('tasksStore', {
   getters: {
     isCherryPickListButtonDisabled(state) {
       return state.selectedCommits.size === 0;
+    },
+    filteredTasks(state) {
+      if (state.selectedAuthors.length === 0) {
+        return state.masterTasks;
+      }
+
+      return state.masterTasks.filter((task) =>
+        Object.values(task.commits || {}).some((commit) =>
+          state.selectedAuthors.includes(commit.commit.authorEmail?.split('@')[0])
+        )
+      );
     },
   },
 });

@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import "vue-multiselect/dist/vue-multiselect.min.css";
 
 .toggle-button {
     background-color: #fff;

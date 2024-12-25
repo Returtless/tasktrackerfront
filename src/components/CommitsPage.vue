@@ -8,7 +8,6 @@
       </label>
     </div>
 
-    <!-- Main Container -->
     <div
       class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
       <div class="container mx-auto py-8 px-4">
@@ -19,31 +18,25 @@
             <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg">
               <h1 class="text-center text-xl font-bold">Commits Page</h1>
               <!-- Filters -->
-              <div class="flex justify-between mt-2">
+              <div class="flex justify-between items-center mt-2">
+                <!-- Левый блок: комбобокс и сортировка -->
                 <div class="flex items-center space-x-4">
-                  <input
-                    v-model="authorFilter"
-                    class="border p-2 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
-                    placeholder="Filter by Author"
-                  />
-                  <button @click="toggleDateSort" class="bg-gray-300 p-2 rounded hover:bg-gray-400">
+                  <!-- Multiselect Component -->
+                  <multiselect v-model="selectedAuthors" :options="authorOptions" :multiple="true"
+                    placeholder="Filter by Author" class="w-64" />
+                  <button @click="toggleDateSort" class="sort-date bg-gray-300 p-2 rounded hover:bg-gray-400">
                     Sort by Date ({{ sortDirection.date }})
                   </button>
                 </div>
-                <button
-  :disabled="tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton"
-  @click="tasksStore.sendCherryPickList"
-  :class="[
-    'text-white px-4 py-2 rounded focus:outline-none focus:ring-2 transition-all duration-300',
-    tasksStore.loadingListButton
-      ? 'bg-green-500 animate-pulse'
-      : 'bg-green-500 hover:bg-green-600 focus:ring-green-400',
-    tasksStore.isCherryPickListButtonDisabled ? 'opacity-50 cursor-not-allowed' : ''
-  ]"
->
-  <span v-if="tasksStore.loadingListButton">Ожидание...</span>
-  <span v-else>Cherry-pick Selected</span>
-</button>
+
+                <!-- Правый блок: Cherry-pick кнопка -->
+                <button class="cherry-pick"
+                  :disabled="tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton"
+                  @click="tasksStore.sendCherryPickList"
+                  :class="[tasksStore.loadingListButton ? 'animate-pulse bg-green-500' : 'bg-green-500 hover:bg-green-600', 'text-white px-4 py-2 rounded focus:outline-none focus:ring-2']">
+                  <span v-if="tasksStore.loadingListButton">Processing...</span>
+                  <span v-else>Cherry-pick Selected</span>
+                </button>
               </div>
             </div>
 
@@ -63,7 +56,8 @@
 
             <!-- Data Table -->
             <div v-if="!tasksStore.loading && !tasksStore.error">
-              <table class="min-w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200" style="table-layout: fixed;">
+              <table class="min-w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200"
+                style="table-layout: fixed;">
                 <thead>
                   <tr>
                     <th class="border-b p-4 text-left w-1/12">Select</th>
@@ -79,14 +73,10 @@
                   <tr v-for="task in filteredTasks" :key="task.key" class="border-b">
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li
-                          v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
+                        <li v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
                           :key="commit?.mrNumber || Math.random()">
-                          <input
-                            type="checkbox"
-                            :checked="tasksStore.selectedCommits?.has(commit?.mrNumber)"
-                            @change="commit?.mrNumber && tasksStore.toggleCommitSelection(commit.mrNumber)"
-                          />
+                          <input type="checkbox" :checked="tasksStore.selectedCommits?.has(commit?.mrNumber)"
+                            @change="commit?.mrNumber && tasksStore.toggleCommitSelection(commit.mrNumber)" />
                         </li>
                       </ul>
                     </td>
@@ -97,18 +87,18 @@
                       </button>
                     </td>
                     <td class="p-4 text-center whitespace-nowrap">
-                      {{ new Date(task.date).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '') }}
+                      {{ new Date(task.date).toLocaleString('ru-RU', {
+                        day: '2-digit', month: '2-digit', year:
+                          'numeric', hour: '2-digit', minute: '2-digit'
+                      }).replace(',', '') }}
                     </td>
 
                     <!-- Master Commits -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li
-                          v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
-                          :key="commit?.mrNumber || Math.random()"
-                          class="relative">
-                          <button
-                            v-if="commit?.mrNumber"
+                        <li v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
+                          :key="commit?.mrNumber || Math.random()" class="relative">
+                          <button v-if="commit?.mrNumber"
                             @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)"
                             class="bg-blue-500 text-white px-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             MR #{{ commit?.mrNumber }}
@@ -120,10 +110,8 @@
                     <!-- Author -->
                     <td class="p-4 text-center align-middle">
                       <ul class="list-none space-y-2">
-                        <li
-                          v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
-                          :key="commit?.mrNumber || Math.random()"
-                          class="whitespace-nowrap">
+                        <li v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
+                          :key="commit?.mrNumber || Math.random()" class="whitespace-nowrap">
                           {{ commit?.commit?.authorEmail?.split('@')[0] || 'Unknown' }}
                         </li>
                       </ul>
@@ -132,19 +120,15 @@
                     <!-- Release Commits -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li
-                          v-for="commit in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
-                          :key="commit?.mrNumber || Math.random()"
-                          class="relative">
-                          <button
-                            v-if="commit?.mrNumber"
-                            :class="[
-                              Object.keys(task.commits || {}).length !==
+                        <li v-for="commit in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
+                          :key="commit?.mrNumber || Math.random()" class="relative">
+                          <button v-if="commit?.mrNumber" :class="[
+                            Object.keys(task.commits || {}).length !==
                               Object.keys(task.releaseCommits || {}).length
-                                ? 'bg-red-500 focus:ring-red-500 hover:bg-red-600'
-                                : 'bg-green-500 focus:ring-green-500 hover:bg-green-600',
-                              'text-white px-2 rounded focus:outline-none focus:ring-2',
-                            ]"
+                              ? 'bg-red-500 focus:ring-red-500 hover:bg-red-600'
+                              : 'bg-green-500 focus:ring-green-500 hover:bg-green-600',
+                            'text-white px-2 rounded focus:outline-none focus:ring-2',
+                          ]"
                             @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)">
                             MR #{{ commit.mrNumber }}
                           </button>
@@ -155,17 +139,12 @@
                     <!-- Cherry-pick -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li
-                          v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
-                          :key="commit?.mrNumber || Math.random()"
-                          class="relative">
-                          <button
-                            v-if="task.releaseCommits?.length === 0"
-                            :class="[
-                              'bg-gray-500 text-white px-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-300',
-                              tasksStore.loadingButton ? 'animate-pulse' : '',
-                            ]"
-                            :disabled="tasksStore.loadingButton"
+                        <li v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
+                          :key="commit?.mrNumber || Math.random()" class="relative">
+                          <button v-if="task.releaseCommits?.length === 0" :class="[
+                            'bg-gray-500 text-white px-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-300',
+                            tasksStore.loadingButton ? 'animate-pulse' : '',
+                          ]" :disabled="tasksStore.loadingButton"
                             @click="tasksStore.sendCherryPickRequest(commit.mrNumber, task.key, $event)">
                             <span v-if="tasksStore.loadingButton">Ожидание...</span>
                             <span v-else>Cherry-pick</span>
@@ -187,17 +166,30 @@
 <script>
 import { useTasksStore } from '@/stores/commitsStore';
 import { ref, computed } from 'vue';
+import Multiselect from 'vue-multiselect';
 
 export default {
+  components: { Multiselect },
   setup() {
     const tasksStore = useTasksStore();
     tasksStore.fetchCommits();
 
     const isDarkMode = ref(false);
-    const authorFilter = ref('');
+    const selectedAuthors = ref([]); // Для хранения выбранных авторов
     const sortKey = ref(null);
     const sortDirection = ref({ date: 'asc' });
 
+    // Генерация списка доступных авторов из masterTasks
+    const authorOptions = computed(() => {
+      const authors = new Set();
+      tasksStore.masterTasks.forEach((task) =>
+        Object.values(task.commits || {}).forEach((commit) =>
+          authors.add(commit.commit.authorEmail?.split('@')[0])
+        )
+      );
+      return Array.from(authors);
+    });
+    console.log('authorOptions:', authorOptions);
     const filteredCommits = (commits) => {
       if (!commits) {
         console.error('Commits object is undefined or null:', commits);
@@ -205,8 +197,8 @@ export default {
       }
       const result = Object.values(commits).filter(
         (commit) =>
-          authorFilter.value === '' ||
-          commit?.commit?.authorEmail?.toLowerCase().includes(authorFilter.value.toLowerCase())
+          selectedAuthors.value.length === 0 ||
+          selectedAuthors.value.includes(commit?.commit?.authorEmail?.split('@')[0])
       );
       console.log('Filtered Commits:', result);
       return result;
@@ -215,12 +207,12 @@ export default {
     const filteredTasks = computed(() => {
       let tasks = tasksStore.masterTasks;
 
-      // Фильтрация по автору
-      if (authorFilter.value) {
+      // Фильтрация по выбранным авторам
+      if (selectedAuthors.value.length > 0) {
         tasks = tasks.filter((task) =>
           task.commits &&
           Object.values(task.commits).some((commit) =>
-            commit?.commit?.authorEmail?.toLowerCase().includes(authorFilter.value.toLowerCase())
+            selectedAuthors.value.includes(commit?.commit?.authorEmail?.split('@')[0])
           )
         );
       }
@@ -251,7 +243,8 @@ export default {
     return {
       tasksStore,
       isDarkMode,
-      authorFilter,
+      selectedAuthors,
+      authorOptions,
       sortKey,
       sortDirection,
       filteredTasks,
@@ -301,16 +294,41 @@ export default {
   border-radius: 50%;
 }
 
-input:checked + .slider {
+input:checked+.slider {
   background-color: #4caf50;
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
   transform: translateX(26px);
 }
 
-.dark input:checked + .slider {
+.dark input:checked+.slider {
   background-color: #000;
+}
+
+.dark {
+  background-color: #121212;
+  color: #ffffff;
+}
+
+.dark body {
+  background-color: #121212;
+}
+
+.dark .container {
+  background-color: transparent;
+}
+
+button {
+  height: 40px;
+  line-height: 40px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+button.cherry-pick {
+  height: 40px;
+  min-width: 150px;
 }
 
 button {
@@ -327,11 +345,60 @@ button {
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.1);
   }
+
   100% {
     transform: scale(1);
   }
+}
+
+.flex {
+  display: flex;
+  align-items: center;
+  /* Выравнивание по вертикали */
+  justify-content: space-between;
+  /* Пространство между блоками */
+}
+
+.space-x-4>*+* {
+  margin-left: 1rem;
+  /* Отступы между элементами внутри flex-контейнера */
+}
+
+button.cherry-pick {
+  height: 40px;
+  min-width: 150px;
+  line-height: 40px;
+  /* Центрирование текста */
+  padding: 0 10px;
+  /* Добавляем внутренние отступы */
+}
+
+.multiselect {
+  max-width: 300px;
+  /* Ограничение ширины комбобокса */
+}
+
+button {
+  white-space: nowrap;
+  /* Запрещает перенос текста */
+}
+
+button.sort-date {
+  height: 40px;
+  /* Высота кнопки */
+  line-height: 40px;
+  /* Центрирование текста по вертикали */
+  padding: 0 10px;
+  /* Горизонтальные отступы */
+  text-align: center;
+  /* Центрирование текста */
+  display: inline-block;
+  /* Убедитесь, что кнопка отображается корректно */
+  white-space: nowrap;
+  /* Запрещает перенос текста */
 }
 </style>
