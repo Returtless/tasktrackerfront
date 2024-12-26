@@ -8,9 +8,50 @@
       </label>
     </div>
 
-    <div
-      class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
-      <div class="container mx-auto py-8 px-4">
+    <!-- Панель инструментов -->
+    <div class="flex justify-between items-center p-4 bg-gray-200 dark:bg-gray-800 shadow-lg">
+      <div class="flex space-x-4">
+        <!-- Ввод URL GitLab -->
+        <input
+          type="text"
+          v-model="gitlabUrl"
+          placeholder="Enter GitLab URL"
+          class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white"
+        />
+        <!-- Выбор проекта -->
+        <input
+          type="text"
+          v-model="selectedProject"
+          placeholder="Enter Project Name"
+          class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white"
+        />
+        <!-- Выбор веток -->
+        <div class="flex items-center space-x-2">
+          <input
+            type="text"
+            v-model="sourceBranch"
+            placeholder="Source Branch"
+            class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white"
+          />
+          <span class="text-gray-600 dark:text-gray-400">→</span>
+          <input
+            type="text"
+            v-model="targetBranch"
+            placeholder="Target Branch"
+            class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+      </div>
+      <button
+        @click="refreshTable"
+        class="refresh-button bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      >
+        Refresh Table
+      </button>
+    </div>
+
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
+     <div class="container mx-auto py-8 px-4">
         <div class="max-w-4xl mx-auto">
           <!-- Card Wrapper -->
           <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg">
@@ -22,18 +63,24 @@
                 <!-- Левый блок: комбобокс и сортировка -->
                 <div class="flex items-center space-x-4">
                   <!-- Multiselect Component -->
-                  <multiselect v-model="selectedAuthors" :options="authorOptions" :multiple="true"
+                  <multiselect v-model="selectedAuthors" :options="authorOptions" :multiple="true" :show-labels="false"
                     placeholder="Filter by Author" class="w-64" />
                   <button @click="toggleDateSort" class="sort-date bg-gray-300 p-2 rounded hover:bg-gray-400">
                     Sort by Date ({{ sortDirection.date }})
                   </button>
                 </div>
-
                 <!-- Правый блок: Cherry-pick кнопка -->
                 <button class="cherry-pick"
                   :disabled="tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton"
-                  @click="tasksStore.sendCherryPickList"
-                  :class="[tasksStore.loadingListButton ? 'animate-pulse bg-green-500' : 'bg-green-500 hover:bg-green-600', 'text-white px-4 py-2 rounded focus:outline-none focus:ring-2']">
+                  @click="tasksStore.sendCherryPickList" :class="[
+                    tasksStore.loadingListButton
+                      ? 'animate-pulse bg-green-500'
+                      : 'bg-green-500 hover:bg-green-600',
+                    tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton
+                      ? 'opacity-50 cursor-not-allowed'
+                      : '',
+                    'text-white px-4 py-2 rounded focus:outline-none focus:ring-2'
+                  ]">
                   <span v-if="tasksStore.loadingListButton">Processing...</span>
                   <span v-else>Cherry-pick Selected</span>
                 </button>
@@ -88,8 +135,8 @@
                     </td>
                     <td class="p-4 text-center whitespace-nowrap">
                       {{ new Date(task.date).toLocaleString('ru-RU', {
-                        day: '2-digit', month: '2-digit', year:
-                          'numeric', hour: '2-digit', minute: '2-digit'
+                      day: '2-digit', month: '2-digit', year:
+                      'numeric', hour: '2-digit', minute: '2-digit'
                       }).replace(',', '') }}
                     </td>
 
@@ -172,12 +219,35 @@ export default {
   components: { Multiselect },
   setup() {
     const tasksStore = useTasksStore();
-    tasksStore.fetchCommits();
 
     const isDarkMode = ref(false);
     const selectedAuthors = ref([]); // Для хранения выбранных авторов
     const sortKey = ref(null);
     const sortDirection = ref({ date: 'asc' });
+    // Управление таблицей
+    const gitlabUrl = ref('');
+    const selectedProject = ref('');
+    const sourceBranch = ref('master');
+    const targetBranch = ref('release');
+    const isRefreshing = ref(false);
+    
+    const refreshTable = async () => {
+      try {
+        isRefreshing.value = true;
+        tasksStore.loading = true;
+        await tasksStore.fetchCommits({
+          gitlabUrl: gitlabUrl.value,
+          project: selectedProject.value,
+          sourceBranch: sourceBranch.value,
+          targetBranch: targetBranch.value,
+        });
+      } catch (error) {
+        console.error('Failed to refresh table:', error);
+      } finally {
+        isRefreshing.value = false;
+        tasksStore.loading = false;
+      }
+    };
 
     // Генерация списка доступных авторов из masterTasks
     const authorOptions = computed(() => {
@@ -263,6 +333,11 @@ export default {
       filteredCommits,
       toggleDateSort,
       openLink,
+      gitlabUrl,
+      selectedProject,
+      sourceBranch,
+      targetBranch,
+      refreshTable,
     };
   },
 };
@@ -412,5 +487,22 @@ button.sort-date {
   /* Убедитесь, что кнопка отображается корректно */
   white-space: nowrap;
   /* Запрещает перенос текста */
+}
+.refresh-button {
+  height: 40px;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+input {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+input.dark {
+  background-color: #1a202c;
+  color: #fff;
 }
 </style>
