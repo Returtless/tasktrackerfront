@@ -14,21 +14,28 @@ export const useTasksStore = defineStore('tasksStore', {
   }),
 
   actions: {
-    async fetchCommits() {
+    async fetchSettings() {
+      try {
+        const response = await axios.get('http://localhost:8080/api/settings');
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+        throw error;
+      }
+    },
+    
+    async fetchCommits(payload) {
       this.loading = true;
       this.error = null;
-
+    
       try {
-        const response = await axios.get('http://localhost:8080/api/commits', {
-          params: { since: '21.11.2024', key: 'SUF-6177' },
-        });
-
+        const response = await axios.post('http://localhost:8080/api/commits', payload);
         const masterTasks = response.data.masterTasks;
         const releaseTasks = response.data.releaseTasks;
-
+    
         const releaseTasksMap = new Map();
         releaseTasks.forEach((task) => releaseTasksMap.set(task.key, task.commits));
-
+    
         this.masterTasks = masterTasks.map((task) => ({
           ...task,
           releaseCommits: releaseTasksMap.get(task.key) || [],
@@ -46,39 +53,31 @@ export const useTasksStore = defineStore('tasksStore', {
       }
     },
 
-    async sendCherryPickRequest(mrNumber, taskKey, event) {
+    async sendCherryPickRequest(payload) {
       this.loadingButton = true;
-      const buttonPosition = event?.target?.getBoundingClientRect();
-
+    
       try {
-        const response = await axios.post('http://localhost:8080/api/cherrypick', null, {
-          params: { mrNumber, taskKey },
-        });
-
+        const response = await axios.post('http://localhost:8080/api/cherrypick', payload);
+    
         const taskInfo = response.data;
-
-        // Проверяем на наличие ошибки
+    
         if (taskInfo.key === 'Error') {
           showNotification({
             title: 'Error',
             text: taskInfo.errorMessage || 'An unknown error occurred.',
             type: 'error',
-            position: buttonPosition,
           });
           return;
         }
-
-        const task = this.masterTasks.find((task) => task.key === taskKey);
+    
+        const task = this.masterTasks.find((task) => task.key === payload.taskKey);
         if (task) {
           task.releaseCommits.push(...taskInfo.commits);
           showNotification({
             title: 'Success',
-            text: `Cherry-pick request completed for MR #${mrNumber}.`,
+            text: `Cherry-pick request completed for MR #${payload.mrNumber}.`,
             type: 'success',
-            position: buttonPosition,
           });
-        } else {
-          console.warn('Task not found:', taskKey);
         }
       } catch (error) {
         const errorMessage = error.response?.data?.errorMessage || error.message || 'Unknown error';
@@ -86,7 +85,6 @@ export const useTasksStore = defineStore('tasksStore', {
           title: 'Error',
           text: `Error sending cherry-pick request: ${errorMessage}`,
           type: 'error',
-          position: buttonPosition,
         });
         console.error('Error sending cherry-pick request:', error);
       } finally {
@@ -94,8 +92,8 @@ export const useTasksStore = defineStore('tasksStore', {
       }
     },
 
-    async sendCherryPickList() {
-      if (this.selectedCommits.size === 0) {
+    async sendCherryPickList(payload) {
+      if (!payload.mrNumbers || payload.mrNumbers.length === 0) {
         showNotification({
           title: 'Warning',
           text: 'No commits selected.',
@@ -103,24 +101,15 @@ export const useTasksStore = defineStore('tasksStore', {
         });
         return;
       }
-
+    
       this.loadingListButton = true;
-
+    
       try {
-        const params = new URLSearchParams();
-        Array.from(this.selectedCommits).forEach((mrNumber) => {
-          params.append('mrNumbers', mrNumber);
-        });
-
-        const response = await axios.post(
-          `http://localhost:8080/api/cherrypicklist?${params.toString()}`
-        );
-
+        const response = await axios.post('http://localhost:8080/api/cherrypicklist', payload);
+    
         const taskInfos = response.data;
-
-        // Проверяем на наличие ошибок
+    
         const errorTasks = taskInfos.filter((task) => task.key === 'Error');
-
         if (errorTasks.length > 0) {
           errorTasks.forEach((errorTask) => {
             showNotification({
@@ -135,7 +124,6 @@ export const useTasksStore = defineStore('tasksStore', {
             text: `Cherry-pick request sent successfully for ${taskInfos.length} tasks.`,
             type: 'success',
           });
-          // Очищаем выбранные коммиты после успешного выполнения
           this.selectedCommits.clear();
         }
       } catch (error) {

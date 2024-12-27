@@ -9,49 +9,68 @@
     </div>
 
     <!-- Панель инструментов -->
-    <div class="flex justify-between items-center p-4 bg-gray-200 dark:bg-gray-800 shadow-lg">
-      <div class="flex space-x-4">
-        <!-- Ввод URL GitLab -->
-        <input
-          type="text"
-          v-model="gitlabUrl"
-          placeholder="Enter GitLab URL"
-          class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white"
-        />
+    <div class="flex flex-wrap justify-between items-center p-4 bg-gray-200 dark:bg-gray-800 shadow-lg gap-4">
+      <!-- Секция с выпадающими списками -->
+      <div class="flex flex-wrap items-center gap-4">
+        <!-- Выбор URL GitLab -->
+        <select v-if="settings?.gitlabUrls" v-model="selectedGitlabUrl"
+          class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white">
+          <option value="" disabled selected>Select GitLab URL</option>
+          <option v-for="url in settings.gitlabUrls" :key="url.url" :value="url.url">
+            {{ url.url }}
+          </option>
+        </select>
+
         <!-- Выбор проекта -->
-        <input
-          type="text"
-          v-model="selectedProject"
-          placeholder="Enter Project Name"
-          class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white"
-        />
+        <select v-if="selectedGitlabUrlProjects.length > 0" v-model="selectedProjectId"
+          class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white" :disabled="!selectedGitlabUrl">
+          <option value="" disabled selected>Select Project</option>
+          <option v-for="project in selectedGitlabUrlProjects" :key="project.id" :value="project.id">
+            {{ project.name }}
+          </option>
+        </select>
+
         <!-- Выбор веток -->
-        <div class="flex items-center space-x-2">
-          <input
-            type="text"
-            v-model="sourceBranch"
-            placeholder="Source Branch"
-            class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white"
-          />
+        <div class="flex items-center gap-2">
+          <select v-if="selectedProjectBranches.length > 0" v-model="sourceBranch"
+            class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white" :disabled="!selectedProjectId">
+            <option value="" disabled selected>Select Source Branch</option>
+            <option v-for="branch in selectedProjectBranches" :key="branch" :value="branch">
+              {{ branch }}
+            </option>
+          </select>
           <span class="text-gray-600 dark:text-gray-400">→</span>
-          <input
-            type="text"
-            v-model="targetBranch"
-            placeholder="Target Branch"
-            class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white"
-          />
+          <select v-if="selectedProjectBranches.length > 0" v-model="targetBranch"
+            class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white" :disabled="!selectedProjectId">
+            <option value="" disabled selected>Select Target Branch</option>
+            <option v-for="branch in selectedProjectBranches" :key="branch" :value="branch">
+              {{ branch }}
+            </option>
+          </select>
         </div>
       </div>
-      <button
-        @click="refreshTable"
-        class="refresh-button bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-      >
-        Refresh Table
-      </button>
+
+      <!-- Поля Patch Number и Start Date рядом с Refresh -->
+      <div class="flex items-center gap-4">
+        <!-- Поле Номер доработки -->
+        <input type="text" v-model="patchNumber" placeholder="Patch Number"
+          class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white" />
+
+        <!-- Поле Дата с -->
+        <input type="date" v-model="startDate" class="p-2 border rounded w-40 dark:bg-gray-700 dark:text-white" />
+
+        <!-- Кнопка Refresh Table -->
+        <button @click="refreshTable"
+          class="refresh-button bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          Refresh Table
+        </button>
+      </div>
     </div>
 
-    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
-     <div class="container mx-auto py-8 px-4">
+
+    <div
+      class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
+      <div class="container mx-auto py-8 px-4">
         <div class="max-w-4xl mx-auto">
           <!-- Card Wrapper -->
           <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg">
@@ -72,7 +91,7 @@
                 <!-- Правый блок: Cherry-pick кнопка -->
                 <button class="cherry-pick"
                   :disabled="tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton"
-                  @click="tasksStore.sendCherryPickList" :class="[
+                  @click="handleCherryPickList" :class="[
                     tasksStore.loadingListButton
                       ? 'animate-pulse bg-green-500'
                       : 'bg-green-500 hover:bg-green-600',
@@ -135,8 +154,8 @@
                     </td>
                     <td class="p-4 text-center whitespace-nowrap">
                       {{ new Date(task.date).toLocaleString('ru-RU', {
-                      day: '2-digit', month: '2-digit', year:
-                      'numeric', hour: '2-digit', minute: '2-digit'
+                        day: '2-digit', month: '2-digit', year:
+                          'numeric', hour: '2-digit', minute: '2-digit'
                       }).replace(',', '') }}
                     </td>
 
@@ -192,7 +211,7 @@
                             'bg-gray-500 text-white px-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-300',
                             tasksStore.loadingButton ? 'animate-pulse' : '',
                           ]" :disabled="tasksStore.loadingButton"
-                            @click="tasksStore.sendCherryPickRequest(commit.mrNumber, task.key, $event)">
+                            @click="handleCherryPickRequest(commit.mrNumber, task.key)">
                             <span v-if="tasksStore.loadingButton">Ожидание...</span>
                             <span v-else>Cherry-pick</span>
                           </button>
@@ -212,7 +231,7 @@
 
 <script>
 import { useTasksStore } from '@/stores/commitsStore';
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import Multiselect from 'vue-multiselect';
 
 export default {
@@ -220,36 +239,35 @@ export default {
   setup() {
     const tasksStore = useTasksStore();
 
+    // Новые данные для панели инструментов
+    const settings = ref({ gitlabUrls: [] });
+    const selectedGitlabUrl = ref('');
+    const selectedProjectId = ref('');
+    const sourceBranch = ref('');
+    const targetBranch = ref('');
+
+    // Существующие данные
     const isDarkMode = ref(false);
-    const selectedAuthors = ref([]); // Для хранения выбранных авторов
+    const selectedAuthors = ref([]);
     const sortKey = ref(null);
     const sortDirection = ref({ date: 'asc' });
-    // Управление таблицей
     const gitlabUrl = ref('');
     const selectedProject = ref('');
-    const sourceBranch = ref('master');
-    const targetBranch = ref('release');
+    const patchNumber = ref('');
+    const startDate = ref('');
     const isRefreshing = ref(false);
-    
-    const refreshTable = async () => {
-      try {
-        isRefreshing.value = true;
-        tasksStore.loading = true;
-        await tasksStore.fetchCommits({
-          gitlabUrl: gitlabUrl.value,
-          project: selectedProject.value,
-          sourceBranch: sourceBranch.value,
-          targetBranch: targetBranch.value,
-        });
-      } catch (error) {
-        console.error('Failed to refresh table:', error);
-      } finally {
-        isRefreshing.value = false;
-        tasksStore.loading = false;
-      }
-    };
 
-    // Генерация списка доступных авторов из masterTasks
+    // Вспомогательные вычисления для зависимых списков
+    const selectedGitlabUrlProjects = computed(() => {
+      const urlData = settings.value?.gitlabUrls.find((url) => url.url === selectedGitlabUrl.value);
+      return urlData?.projects || [];
+    });
+
+    const selectedProjectBranches = computed(() => {
+      const projectData = selectedGitlabUrlProjects.value.find((proj) => proj.id === selectedProjectId.value);
+      return projectData?.branches || [];
+    });
+
     const authorOptions = computed(() => {
       const authors = new Set();
       tasksStore.masterTasks.forEach((task) =>
@@ -259,25 +277,85 @@ export default {
       );
       return Array.from(authors);
     });
-    console.log('authorOptions:', authorOptions);
+
+    // Методы
+    const refreshTable = async () => {
+      try {
+        isRefreshing.value = true;
+        tasksStore.loading = true;
+        console.log({
+          gitlabUrl: selectedGitlabUrl.value,
+          projectId: selectedProjectId.value,
+          sourceBranch: sourceBranch.value,
+          targetBranch: targetBranch.value,
+          patchNumber: patchNumber.value,
+          startDate: startDate.value,
+        });
+        await tasksStore.fetchCommits({
+          gitlabUrl: selectedGitlabUrl.value,
+          projectId: selectedProjectId.value,
+          sourceBranch: sourceBranch.value,
+          targetBranch: targetBranch.value,
+          patchNumber: patchNumber.value,
+          startDate: startDate.value,
+        });
+      } catch (error) {
+        console.error('Failed to refresh table:', error);
+      } finally {
+        isRefreshing.value = false;
+        tasksStore.loading = false;
+      }
+    };
+
+    const handleCherryPickRequest = (mrNumber, taskKey) => {
+  const payload = {
+    gitlabUrl: selectedGitlabUrl.value,
+    projectId: selectedProjectId.value,
+    branchFrom: sourceBranch.value,
+    branchTo: targetBranch.value,
+    mrNumber,
+    taskKey,
+  };
+
+  tasksStore.sendCherryPickRequest(payload);
+};
+
+const handleCherryPickList = () => {
+  const payload = {
+    gitlabUrl: selectedGitlabUrl.value,
+    projectId: selectedProjectId.value,
+    branchFrom: sourceBranch.value,
+    branchTo: targetBranch.value,
+    mrNumbers: Array.from(tasksStore.selectedCommits), // Список выбранных MR
+  };
+
+  tasksStore.sendCherryPickList(payload);
+};
+
+    const toggleDateSort = () => {
+      sortDirection.value.date = sortDirection.value.date === 'asc' ? 'desc' : 'asc';
+      sortKey.value = 'date';
+    };
+
+    const openLink = (url) => {
+      window.open(url, '_blank');
+    };
+
     const filteredCommits = (commits) => {
       if (!commits) {
         console.error('Commits object is undefined or null:', commits);
         return [];
       }
-      const result = Object.values(commits).filter(
+      return Object.values(commits).filter(
         (commit) =>
           selectedAuthors.value.length === 0 ||
           selectedAuthors.value.includes(commit?.commit?.authorEmail?.split('@')[0])
       );
-      console.log('Filtered Commits:', result);
-      return result;
     };
 
     const filteredTasks = computed(() => {
       let tasks = tasksStore.masterTasks;
 
-      // Фильтрация по выбранным авторам
       if (selectedAuthors.value.length > 0) {
         tasks = tasks.filter((task) =>
           task.commits &&
@@ -287,14 +365,11 @@ export default {
         );
       }
 
-      // Сортировка по дате
       if (sortKey.value === 'date') {
         tasks = tasks.slice().sort((a, b) => {
           const dateA = new Date(a.date);
           const dateB = new Date(b.date);
-          return sortDirection.value.date === 'asc'
-            ? dateA - dateB
-            : dateB - dateA;
+          return sortDirection.value.date === 'asc' ? dateA - dateB : dateB - dateA;
         });
       }
       return tasks;
@@ -312,16 +387,16 @@ export default {
       }
     });
 
-    const toggleDateSort = () => {
-      sortDirection.value.date =
-        sortDirection.value.date === 'asc' ? 'desc' : 'asc';
-      sortKey.value = 'date';
-    };
+    // Загрузка настроек при монтировании компонента
+    onMounted(async () => {
+      try {
+        settings.value = await tasksStore.fetchSettings();
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    });
 
-    const openLink = (url) => {
-      window.open(url, '_blank');
-    };
-
+    // Возвращаем все данные и методы
     return {
       tasksStore,
       isDarkMode,
@@ -330,6 +405,8 @@ export default {
       sortKey,
       sortDirection,
       filteredTasks,
+      patchNumber,
+      startDate,
       filteredCommits,
       toggleDateSort,
       openLink,
@@ -337,9 +414,17 @@ export default {
       selectedProject,
       sourceBranch,
       targetBranch,
+      selectedGitlabUrl,
+      selectedProjectId,
+      selectedGitlabUrlProjects,
+      selectedProjectBranches,
       refreshTable,
+      settings,
+      handleCherryPickRequest,
+      handleCherryPickList,
     };
-  },
+  }
+  ,
 };
 </script>
 <style scoped>
@@ -488,6 +573,7 @@ button.sort-date {
   white-space: nowrap;
   /* Запрещает перенос текста */
 }
+
 .refresh-button {
   height: 40px;
   min-width: 120px;
@@ -496,13 +582,51 @@ button.sort-date {
   justify-content: center;
   white-space: nowrap;
 }
+
 input {
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 5px;
 }
+
 input.dark {
   background-color: #1a202c;
   color: #fff;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.refresh-button {
+  height: 40px;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+select {
+  min-width: 120px;
+}
+
+@media (max-width: 768px) {
+  .flex-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gap-4 {
+    gap: 0.5rem;
+  }
+
+  .refresh-button {
+    align-self: center;
+  }
 }
 </style>
