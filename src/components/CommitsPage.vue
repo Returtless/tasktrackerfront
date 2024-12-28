@@ -8,62 +8,69 @@
       </label>
     </div>
 
-    <!-- Панель инструментов -->
-    <div class="flex flex-wrap justify-between items-center p-4 bg-gray-200 dark:bg-gray-800 shadow-lg gap-4">
-      <!-- Секция с выпадающими списками -->
-      <div class="flex flex-wrap items-center gap-4">
-        <!-- Выбор URL GitLab -->
-        <select v-if="settings?.gitlabUrls" v-model="selectedGitlabUrl"
-          class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white">
-          <option value="" disabled selected>Select GitLab URL</option>
-          <option v-for="url in settings.gitlabUrls" :key="url.url" :value="url.url">
-            {{ url.url }}
-          </option>
-        </select>
-
-        <!-- Выбор проекта -->
-        <select v-if="selectedGitlabUrlProjects.length > 0" v-model="selectedProjectId"
-          class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white" :disabled="!selectedGitlabUrl">
-          <option value="" disabled selected>Select Project</option>
-          <option v-for="project in selectedGitlabUrlProjects" :key="project.id" :value="project.id">
-            {{ project.name }}
-          </option>
-        </select>
-
-        <!-- Выбор веток -->
-        <div class="flex items-center gap-2">
-          <select v-if="selectedProjectBranches.length > 0" v-model="sourceBranch"
-            class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white" :disabled="!selectedProjectId">
-            <option value="" disabled selected>Select Source Branch</option>
-            <option v-for="branch in selectedProjectBranches" :key="branch" :value="branch">
-              {{ branch }}
-            </option>
-          </select>
-          <span class="text-gray-600 dark:text-gray-400">→</span>
-          <select v-if="selectedProjectBranches.length > 0" v-model="targetBranch"
-            class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white" :disabled="!selectedProjectId">
-            <option value="" disabled selected>Select Target Branch</option>
-            <option v-for="branch in selectedProjectBranches" :key="branch" :value="branch">
-              {{ branch }}
-            </option>
-          </select>
+    <div class="relative">
+      <!-- Панель инструментов -->
+      <div class="flex flex-wrap justify-between items-center p-4 bg-gray-200 dark:bg-gray-800 shadow-lg gap-4">
+        <!-- Индикатор загрузки -->
+        <div v-if="isSettingsLoading" class="w-full">
+          <div class="relative h-2 bg-gray-300 dark:bg-gray-700 rounded">
+            <div class="absolute h-full bg-blue-500 dark:bg-blue-400 rounded animate-loading" style="width: 100%;">
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- Поля Patch Number и Start Date рядом с Refresh -->
-      <div class="flex items-center gap-4">
-        <!-- Поле Номер доработки -->
-        <input type="text" v-model="patchNumber" placeholder="Patch Number"
-          class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white" />
+        <!-- Секция с выпадающими списками -->
+        <template v-else>
+          <div class="flex flex-wrap items-center gap-4">
+            <!-- Выбор URL GitLab -->
+            <select v-model="selectedGitlabUrl" class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white">
+              <option value="" disabled>Select GitLab URL</option>
+              <option v-for="url in settings?.gitlabUrls || []" :key="url.url" :value="url.url">
+                {{ url.url }}
+              </option>
+            </select>
 
-        <!-- Поле Дата с -->
-        <input type="date" v-model="startDate" class="p-2 border rounded w-40 dark:bg-gray-700 dark:text-white" />
+            <!-- Выбор проекта -->
+            <select v-model="selectedProjectId" class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white"
+              :disabled="!selectedGitlabUrl">
+              <option value="" disabled>Select Project</option>
+              <option v-for="project in selectedGitlabUrlProjects" :key="project.id" :value="project.id">
+                {{ project.name }}
+              </option>
+            </select>
 
-        <!-- Кнопка Refresh Table -->
-        <button @click="refreshTable"
-          class="refresh-button bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
-          Refresh Table
-        </button>
+            <!-- Выбор веток -->
+            <select v-model="sourceBranch" class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white"
+              :disabled="!selectedProjectId">
+              <option value="" disabled>Select Source Branch</option>
+              <option v-for="branch in selectedProjectBranches" :key="branch" :value="branch">
+                {{ branch }}
+              </option>
+            </select>
+            <span class="text-gray-600 dark:text-gray-400">→</span>
+            <select v-model="targetBranch" class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white"
+              :disabled="!selectedProjectId">
+              <option value="" disabled>Select Target Branch</option>
+              <option v-for="branch in selectedProjectBranches" :key="branch" :value="branch">
+                {{ branch }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Поля Patch Number и Start Date рядом с Refresh -->
+          <div class="flex items-center gap-4">
+            <input type="text" v-model="patchNumber" placeholder="Patch Number"
+              class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white" />
+
+            <input type="date" v-model="startDate" class="p-2 border rounded w-40 dark:bg-gray-700 dark:text-white" />
+
+            <button @click="refreshTable"
+              class="refresh-button bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              :disabled="isRefreshDisabled" :class="{ 'opacity-50 cursor-not-allowed': isRefreshDisabled }">
+              Refresh Table
+            </button>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -165,7 +172,7 @@
                         <li v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
                           :key="commit?.mrNumber || Math.random()" class="relative">
                           <button v-if="commit?.mrNumber"
-                            @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)"
+                            @click="openLink(`${commit.commit.webUrl}`)"
                             class="bg-blue-500 text-white px-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             MR #{{ commit?.mrNumber }}
                           </button>
@@ -195,7 +202,7 @@
                               : 'bg-green-500 focus:ring-green-500 hover:bg-green-600',
                             'text-white px-2 rounded focus:outline-none focus:ring-2',
                           ]"
-                            @click="openLink(`https://otr-dp-suf-prod-gl-suf01.otr.ru/suf/suf/-/merge_requests/${commit.mrNumber}`)">
+                            @click="openLink(`${commit.commit.webUrl}`)">
                             MR #{{ commit.mrNumber }}
                           </button>
                         </li>
@@ -256,7 +263,7 @@ export default {
     const patchNumber = ref('');
     const startDate = ref('');
     const isRefreshing = ref(false);
-
+    const isSettingsLoading = ref(true);
     // Вспомогательные вычисления для зависимых списков
     const selectedGitlabUrlProjects = computed(() => {
       const urlData = settings.value?.gitlabUrls.find((url) => url.url === selectedGitlabUrl.value);
@@ -276,6 +283,16 @@ export default {
         )
       );
       return Array.from(authors);
+    });
+
+    const isRefreshDisabled = computed(() => {
+      return (
+        isSettingsLoading.value || // Если данные загружаются
+        !selectedGitlabUrl.value || // Если GitLab URL не выбран
+        !selectedProjectId.value || // Если проект не выбран
+        !sourceBranch.value || // Если исходная ветка не выбрана
+        !targetBranch.value // Если целевая ветка не выбрана
+      );
     });
 
     // Методы
@@ -308,29 +325,29 @@ export default {
     };
 
     const handleCherryPickRequest = (mrNumber, taskKey) => {
-  const payload = {
-    gitlabUrl: selectedGitlabUrl.value,
-    projectId: selectedProjectId.value,
-    branchFrom: sourceBranch.value,
-    branchTo: targetBranch.value,
-    mrNumber,
-    taskKey,
-  };
+      const payload = {
+        gitlabUrl: selectedGitlabUrl.value,
+        projectId: selectedProjectId.value,
+        branchFrom: sourceBranch.value,
+        branchTo: targetBranch.value,
+        mrNumber,
+        taskKey,
+      };
 
-  tasksStore.sendCherryPickRequest(payload);
-};
+      tasksStore.sendCherryPickRequest(payload);
+    };
 
-const handleCherryPickList = () => {
-  const payload = {
-    gitlabUrl: selectedGitlabUrl.value,
-    projectId: selectedProjectId.value,
-    branchFrom: sourceBranch.value,
-    branchTo: targetBranch.value,
-    mrNumbers: Array.from(tasksStore.selectedCommits), // Список выбранных MR
-  };
+    const handleCherryPickList = () => {
+      const payload = {
+        gitlabUrl: selectedGitlabUrl.value,
+        projectId: selectedProjectId.value,
+        branchFrom: sourceBranch.value,
+        branchTo: targetBranch.value,
+        mrNumbers: Array.from(tasksStore.selectedCommits), // Список выбранных MR
+      };
 
-  tasksStore.sendCherryPickList(payload);
-};
+      tasksStore.sendCherryPickList(payload);
+    };
 
     const toggleDateSort = () => {
       sortDirection.value.date = sortDirection.value.date === 'asc' ? 'desc' : 'asc';
@@ -390,9 +407,12 @@ const handleCherryPickList = () => {
     // Загрузка настроек при монтировании компонента
     onMounted(async () => {
       try {
+        isSettingsLoading.value = true; // Показать индикатор загрузки
         settings.value = await tasksStore.fetchSettings();
       } catch (error) {
         console.error('Error loading settings:', error);
+      } finally {
+        isSettingsLoading.value = false; // Скрыть индикатор загрузки
       }
     });
 
@@ -422,6 +442,8 @@ const handleCherryPickList = () => {
       settings,
       handleCherryPickRequest,
       handleCherryPickList,
+      isSettingsLoading,
+      isRefreshDisabled,
     };
   }
   ,
@@ -628,5 +650,29 @@ select {
   .refresh-button {
     align-self: center;
   }
+}
+
+.animate-loading {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 1) 25%, rgba(59, 130, 246, 0.5) 50%, rgba(59, 130, 246, 1) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.opacity-50 {
+  opacity: 0.5;
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed;
 }
 </style>

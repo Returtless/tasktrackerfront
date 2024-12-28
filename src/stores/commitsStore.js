@@ -72,7 +72,13 @@ export const useTasksStore = defineStore('tasksStore', {
     
         const task = this.masterTasks.find((task) => task.key === payload.taskKey);
         if (task) {
-          task.releaseCommits.push(...taskInfo.commits);
+          // Преобразуем Map в массив для корректного использования spread
+          const commitsToAdd = Array.isArray(taskInfo.commits)
+            ? taskInfo.commits
+            : Object.values(taskInfo.commits || {});
+    
+          task.releaseCommits.push(...commitsToAdd);
+    
           showNotification({
             title: 'Success',
             text: `Cherry-pick request completed for MR #${payload.mrNumber}.`,
