@@ -136,9 +136,9 @@
                     <th class="border-b p-4 text-left w-1/12">Select</th>
                     <th class="border-b p-4 text-left w-2/12">Issue Key</th>
                     <th class="border-b p-4 text-left w-2/12">Date</th>
-                    <th class="border-b p-4 text-left w-3/12">Master Commits</th>
+                    <th class="border-b p-4 text-left w-3/12">Source Commits</th>
                     <th class="border-b p-4 text-left w-2/12">Author</th>
-                    <th class="border-b p-4 text-left w-3/12">Release Commits</th>
+                    <th class="border-b p-4 text-left w-3/12">Target Commits</th>
                     <th class="border-b p-4 text-left w-2/12">Cherry-pick</th>
                   </tr>
                 </thead>
@@ -170,11 +170,16 @@
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
                         <li v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
-                          :key="commit?.mrNumber || Math.random()" class="relative">
-                          <button v-if="commit?.mrNumber"
-                            @click="openLink(`${commit.commit.webUrl}`)"
+                          :key="commit?.mrNumber || Math.random()" class="relative flex items-center space-x-1">
+                          <button v-if="commit?.mrNumber" @click="openLink(`${commit.url}`)"
                             class="bg-blue-500 text-white px-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             MR #{{ commit?.mrNumber }}
+                          </button>
+
+                          <button v-if="commit?.commit?.webUrl" @click="openLink(`${commit.commit.webUrl}`)"
+                            class="bg-purple-500 text-white w-6 h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center"
+                            title="Open commit web URL">
+                            🔗
                           </button>
                         </li>
                       </ul>
@@ -190,20 +195,20 @@
                       </ul>
                     </td>
 
-                    <!-- Release Commits -->
+                    <!-- Target Commits -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                        <li v-for="commit in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
-                          :key="commit?.mrNumber || Math.random()" class="relative">
-                          <button v-if="commit?.mrNumber" :class="[
-                            Object.keys(task.commits || {}).length !==
-                              Object.keys(task.releaseCommits || {}).length
-                              ? 'bg-red-500 focus:ring-red-500 hover:bg-red-600'
-                              : 'bg-green-500 focus:ring-green-500 hover:bg-green-600',
-                            'text-white px-2 rounded focus:outline-none focus:ring-2',
-                          ]"
-                            @click="openLink(`${commit.commit.webUrl}`)">
-                            MR #{{ commit.mrNumber }}
+                         <li v-for="commit in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
+                          :key="commit?.mrNumber || Math.random()" class="relative flex items-center space-x-1">
+                          <button v-if="commit?.mrNumber" @click="openLink(`${commit.url}`)"
+                            class="bg-blue-500 text-white px-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            MR #{{ commit?.mrNumber }}
+                          </button>
+
+                          <button v-if="commit?.commit?.webUrl" @click="openLink(`${commit.commit.webUrl}`)"
+                            class="bg-purple-500 text-white w-6 h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center"
+                            title="Open commit web URL">
+                            🔗
                           </button>
                         </li>
                       </ul>
@@ -674,5 +679,26 @@ select {
 
 .cursor-not-allowed {
   cursor: not-allowed;
+}
+
+.bg-purple-500 {
+  background-color: #9b59b6;
+}
+
+.bg-purple-600 {
+  background-color: #8e44ad;
+}
+
+.focus:ring-purple-400 {
+  box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.5);
+}
+
+.flex {
+  display: flex;
+  align-items: center;
+}
+
+.space-x-1> :not([hidden])~ :not([hidden]) {
+  margin-left: 0.25rem;
 }
 </style>
