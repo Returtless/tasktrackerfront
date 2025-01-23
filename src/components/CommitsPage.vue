@@ -78,9 +78,8 @@
     <div
       class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
       <div class="container mx-auto py-8 px-4">
-        <div class="max-w-4xl mx-auto">
           <!-- Card Wrapper -->
-          <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg">
+          <div class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-fit">
             <!-- Header -->
             <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg">
               <h1 class="text-center text-xl font-bold">Commits Page</h1>
@@ -128,9 +127,11 @@
             </div>
 
             <!-- Data Table -->
-            <div v-if="!tasksStore.loading && !tasksStore.error">
-              <table class="min-w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200"
-                style="table-layout: fixed;">
+    <div v-if="!tasksStore.loading && !tasksStore.error" class="flex justify-center">
+    <div class="w-fit">
+      <table class="table-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200">
+      
+
                 <thead>
                   <tr>
                     <th class="border-b p-4 text-left w-1/12">Select</th>
@@ -161,8 +162,8 @@
                     </td>
                     <td class="p-4 text-center whitespace-nowrap">
                       {{ new Date(task.date).toLocaleString('ru-RU', {
-                        day: '2-digit', month: '2-digit', year:
-                          'numeric', hour: '2-digit', minute: '2-digit'
+                      day: '2-digit', month: '2-digit', year:
+                      'numeric', hour: '2-digit', minute: '2-digit'
                       }).replace(',', '') }}
                     </td>
 
@@ -198,7 +199,7 @@
                     <!-- Target Commits -->
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
-                         <li v-for="commit in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
+                        <li v-for="commit in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
                           :key="commit?.mrNumber || Math.random()" class="relative flex items-center space-x-1">
                           <button v-if="commit?.mrNumber" @click="openLink(`${commit.url}`)"
                             class="bg-blue-500 text-white px-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -219,22 +220,46 @@
                       <ul class="list-none space-y-2">
                         <li v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
                           :key="commit?.mrNumber || Math.random()" class="relative">
-                          <button v-if="task.releaseCommits?.length === 0" :class="[
-                            'bg-gray-500 text-white px-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-300',
-                            tasksStore.loadingButton ? 'animate-pulse' : '',
-                          ]" :disabled="tasksStore.loadingButton"
-                            @click="handleCherryPickRequest(commit.mrNumber, task.key)">
-                            <span v-if="tasksStore.loadingButton">Ожидание...</span>
-                            <span v-else>Cherry-pick</span>
-                          </button>
+                          <button
+  :disabled="tasksStore.loadingButtons.has(commit.mrNumber)"
+  @click="handleCherryPickRequest(commit.mrNumber, task.key)"
+  class="relative flex justify-center items-center w-32 h-10 px-4 py-2 rounded text-white transition-all duration-300 ease-in-out"
+  :class="[
+    tasksStore.loadingButtons.has(commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600',
+  ]"
+  :title="tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key) : 'Cherry-pick'"
+>
+  <!-- Фиолетовый индикатор загрузки снизу -->
+  <div
+    v-if="tasksStore.loadingButtons.has(commit.mrNumber)"
+    class="absolute bottom-0 left-0 h-1 bg-purple-500 w-full animate-progress"
+  ></div>
+
+  <!-- Контейнер текста -->
+  <span
+    class="flex items-center justify-center w-full h-full text-center px-2 leading-normal"
+    :class="{
+      'text-sm': tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key).length <= 15 : true,
+      'text-xs': tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key).length > 15 : false,
+      'text-[10px]': tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key).length > 30 : false,
+    }"
+  >
+    {{
+      tasksStore.loadingButtons.has(commit.mrNumber)
+        ? tasksStore.getTaskStatus(task.key).slice(0, 18) + (tasksStore.getTaskStatus(task.key).length > 18 ? "..." : "")
+        : "Cherry-pick"
+    }}
+  </span>
+</button>
+
                         </li>
                       </ul>
                     </td>
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
-          </div>
         </div>
       </div>
     </div>
@@ -414,6 +439,7 @@ export default {
       try {
         isSettingsLoading.value = true; // Показать индикатор загрузки
         settings.value = await tasksStore.fetchSettings();
+        tasksStore.subscribeToTaskStatus();
       } catch (error) {
         console.error('Error loading settings:', error);
       } finally {
@@ -701,4 +727,14 @@ select {
 .space-x-1> :not([hidden])~ :not([hidden]) {
   margin-left: 0.25rem;
 }
+
+@keyframes progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+.animate-progress {
+  animation: progress 2s linear infinite;
+}
+
 </style>

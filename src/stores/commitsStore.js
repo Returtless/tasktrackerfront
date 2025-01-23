@@ -6,11 +6,12 @@ export const useTasksStore = defineStore('tasksStore', {
   state: () => ({
     masterTasks: [],
     loading: false,
-    loadingButton: false,
     loadingListButton: false, // Для кнопки Cherry-pick Selected
     selectedCommits: new Set(),
     selectedAuthors: [], // Для фильтрации по авторам
     error: null,
+    loadingButtons: new Set(),
+    taskStatuses: {}, // Храним статусы для каждого taskKey
   }),
 
   actions: {
@@ -54,9 +55,8 @@ export const useTasksStore = defineStore('tasksStore', {
     },
 
     async sendCherryPickRequest(payload) {
-      this.loadingButton = true;
-    
       try {
+        this.loadingButtons.add(payload.mrNumber);
         const response = await axios.post('http://localhost:8080/api/cherrypick', payload);
     
         const taskInfo = response.data;
@@ -94,7 +94,7 @@ export const useTasksStore = defineStore('tasksStore', {
         });
         console.error('Error sending cherry-pick request:', error);
       } finally {
-        this.loadingButton = false;
+        this.loadingButtons.delete(payload.mrNumber); // Снимаем состояние загрузки
       }
     },
 
@@ -156,6 +156,19 @@ export const useTasksStore = defineStore('tasksStore', {
       }
       console.log('Updated selectedCommits:', Array.from(this.selectedCommits));
     },
+    subscribeToTaskStatus() {
+      const eventSource = new EventSource('http://localhost:8080/api/task-status');
+
+      eventSource.onmessage = (event) => {
+        const statusUpdate = JSON.parse(event.data);
+        this.taskStatuses[statusUpdate.taskKey] = statusUpdate.status;
+      };
+
+      eventSource.onerror = () => {
+        console.error('Error with SSE connection.');
+        eventSource.close();
+      };
+    },
   },
 
   getters: {
@@ -172,6 +185,9 @@ export const useTasksStore = defineStore('tasksStore', {
           state.selectedAuthors.includes(commit.commit.authorEmail?.split('@')[0])
         )
       );
+    },
+    getTaskStatus: (state) => (taskKey) => {
+      return state.taskStatuses?.[taskKey] ?? 'Ожидание...'; // Безопасный доступ
     },
   },
 });
