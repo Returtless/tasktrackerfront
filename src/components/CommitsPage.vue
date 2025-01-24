@@ -78,59 +78,78 @@
     <div
       class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 transition-colors duration-300">
       <div class="container mx-auto py-8 px-4">
-          <!-- Card Wrapper -->
-          <div class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-fit">
-            <!-- Header -->
-            <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg">
-              <h1 class="text-center text-xl font-bold">Commits Page</h1>
-              <!-- Filters -->
-              <div class="flex justify-between items-center mt-2">
-                <!-- Левый блок: комбобокс и сортировка -->
-                <div class="flex items-center space-x-4">
-                  <!-- Multiselect Component -->
-                  <multiselect v-model="selectedAuthors" :options="authorOptions" :multiple="true" :show-labels="false"
-                    placeholder="Filter by Author" class="w-64" />
-                  <button @click="toggleDateSort" class="sort-date bg-gray-300 p-2 rounded hover:bg-gray-400">
-                    Sort by Date ({{ sortDirection.date }})
-                  </button>
-                </div>
-                <!-- Правый блок: Cherry-pick кнопка -->
-                <button class="cherry-pick"
-                  :disabled="tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton"
-                  @click="handleCherryPickList" :class="[
-                    tasksStore.loadingListButton
-                      ? 'animate-pulse bg-green-500'
-                      : 'bg-green-500 hover:bg-green-600',
-                    tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton
-                      ? 'opacity-50 cursor-not-allowed'
-                      : '',
-                    'text-white px-4 py-2 rounded focus:outline-none focus:ring-2'
-                  ]">
-                  <span v-if="tasksStore.loadingListButton">Processing...</span>
-                  <span v-else>Cherry-pick Selected</span>
+        <!-- Card Wrapper -->
+        <div class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-fit">
+          <!-- Header -->
+          <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg">
+            <h1 class="text-center text-xl font-bold">Commits Page</h1>
+            <!-- Filters -->
+            <div class="flex justify-between items-center mt-2">
+              <!-- Левый блок: комбобокс и сортировка -->
+              <div class="flex items-center space-x-4">
+                <!-- Multiselect Component -->
+                <multiselect v-model="selectedAuthors" :options="authorOptions" :multiple="true" :show-labels="false"
+                  placeholder="Filter by Author" class="w-64" />
+                <button @click="toggleDateSort" class="sort-date bg-gray-300 p-2 rounded hover:bg-gray-400">
+                  Sort by Date ({{ sortDirection.date }})
                 </button>
               </div>
-            </div>
+              <div class="inline-flex border border-gray-400 dark:border-gray-600 rounded-lg overflow-hidden shadow-md">
+                <!-- Кнопка "Show All" -->
+                <button @click="hideWithTargetCommits = false"
+                  class="flex-1 px-6 py-2 text-sm font-medium flex items-center justify-center transition-all duration-300"
+                  :class="hideWithTargetCommits
+                    ? 'bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-600'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'">
+                  All
+                </button>
 
-            <!-- Loading Spinner -->
-            <div class="p-4 text-center" v-if="tasksStore.loading">
-              <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-              </svg>
+                <!-- Кнопка "Hide Target Commits" -->
+                <button @click="hideWithTargetCommits = true"
+                  class="flex-1 px-6 py-2 text-sm font-medium flex items-center justify-center transition-all duration-300"
+                  :class="hideWithTargetCommits
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-600'">
+                  Not cherry-picked
+                </button>
+              </div>
+              <!-- Правый блок: Cherry-pick кнопка -->
+              <button class="cherry-pick"
+                :disabled="tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton"
+                @click="handleCherryPickList" :class="[
+                  tasksStore.loadingListButton
+                    ? 'animate-pulse bg-green-500'
+                    : 'bg-green-500 hover:bg-green-600',
+                  tasksStore.isCherryPickListButtonDisabled || tasksStore.loadingListButton
+                    ? 'opacity-50 cursor-not-allowed'
+                    : '',
+                  'text-white px-4 py-2 rounded focus:outline-none focus:ring-2'
+                ]">
+                <span v-if="tasksStore.loadingListButton">Processing...</span>
+                <span v-else>Cherry-pick Selected</span>
+              </button>
             </div>
+          </div>
 
-            <!-- Error Message -->
-            <div v-if="tasksStore.error" class="text-center text-red-500 p-4">
-              {{ tasksStore.error }}
-            </div>
+          <!-- Loading Spinner -->
+          <div class="p-4 text-center" v-if="tasksStore.loading">
+            <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+          </div>
 
-            <!-- Data Table -->
-    <div v-if="!tasksStore.loading && !tasksStore.error" class="flex justify-center">
-    <div class="w-fit">
-      <table class="table-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200">
-      
+          <!-- Error Message -->
+          <div v-if="tasksStore.error" class="text-center text-red-500 p-4">
+            {{ tasksStore.error }}
+          </div>
+
+          <!-- Data Table -->
+          <div v-if="!tasksStore.loading && !tasksStore.error" class="flex justify-center">
+            <div class="w-fit">
+              <table class="table-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200">
+
 
                 <thead>
                   <tr>
@@ -144,7 +163,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="task in filteredTasks" :key="task.key" class="border-b">
+                  <tr v-for="task in filteredTasksWithoutTargetCommits" :key="task.key" class="border-b">
                     <td class="p-4 text-center">
                       <ul class="list-none space-y-2">
                         <li v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
@@ -162,8 +181,8 @@
                     </td>
                     <td class="p-4 text-center whitespace-nowrap">
                       {{ new Date(task.date).toLocaleString('ru-RU', {
-                      day: '2-digit', month: '2-digit', year:
-                      'numeric', hour: '2-digit', minute: '2-digit'
+                        day: '2-digit', month: '2-digit', year:
+                          'numeric', hour: '2-digit', minute: '2-digit'
                       }).replace(',', '') }}
                     </td>
 
@@ -220,37 +239,32 @@
                       <ul class="list-none space-y-2">
                         <li v-for="commit in (task.commits ? filteredCommits(task.commits) : [])"
                           :key="commit?.mrNumber || Math.random()" class="relative">
-                          <button
-  :disabled="tasksStore.loadingButtons.has(commit.mrNumber)"
-  @click="handleCherryPickRequest(commit.mrNumber, task.key)"
-  class="relative flex justify-center items-center w-32 h-10 px-4 py-2 rounded text-white transition-all duration-300 ease-in-out"
-  :class="[
-    tasksStore.loadingButtons.has(commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600',
-  ]"
-  :title="tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key) : 'Cherry-pick'"
->
-  <!-- Фиолетовый индикатор загрузки снизу -->
-  <div
-    v-if="tasksStore.loadingButtons.has(commit.mrNumber)"
-    class="absolute bottom-0 left-0 h-1 bg-purple-500 w-full animate-progress"
-  ></div>
+                          <button :disabled="tasksStore.loadingButtons.has(commit.mrNumber)"
+                            @click="handleCherryPickRequest(commit.mrNumber, task.key)"
+                            class="relative flex justify-center items-center w-32 h-10 px-4 py-2 rounded text-white transition-all duration-300 ease-in-out"
+                            :class="[
+                              tasksStore.loadingButtons.has(commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600',
+                            ]" :title="tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key) : 'Cherry-pick'">
+                            <!-- Фиолетовый индикатор загрузки снизу -->
+                            <div v-if="tasksStore.loadingButtons.has(commit.mrNumber)"
+                              class="absolute bottom-0 left-0 h-1 bg-purple-500 w-full animate-progress"></div>
 
-  <!-- Контейнер текста -->
-  <span
-    class="flex items-center justify-center w-full h-full text-center px-2 leading-normal"
-    :class="{
-      'text-sm': tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key).length <= 15 : true,
-      'text-xs': tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key).length > 15 : false,
-      'text-[10px]': tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key).length > 30 : false,
-    }"
-  >
-    {{
-      tasksStore.loadingButtons.has(commit.mrNumber)
-        ? tasksStore.getTaskStatus(task.key).slice(0, 18) + (tasksStore.getTaskStatus(task.key).length > 18 ? "..." : "")
-        : "Cherry-pick"
-    }}
-  </span>
-</button>
+                            <!-- Контейнер текста -->
+                            <span class="flex items-center justify-center w-full h-full text-center px-2 leading-normal"
+                              :class="{
+                                'text-sm': tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key).length <= 15 : true,
+                                'text-xs': tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key).length > 15 : false,
+                                'text-[10px]': tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key).length > 30 : false,
+                              }">
+                              {{
+                                tasksStore.loadingButtons.has(commit.mrNumber)
+                                  ? tasksStore.getTaskStatus(task.key).slice(0, 18) +
+                                  (tasksStore.getTaskStatus(task.key).length
+                              > 18 ? "..." : "")
+                              : "Cherry-pick"
+                              }}
+                            </span>
+                          </button>
 
                         </li>
                       </ul>
@@ -258,8 +272,8 @@
                   </tr>
                 </tbody>
               </table>
-              </div>
             </div>
+          </div>
         </div>
       </div>
     </div>
@@ -422,6 +436,20 @@ export default {
       return tasks;
     });
 
+    const hideWithTargetCommits = ref(false); // Флаг для чекбокса
+
+    const filteredTasksWithoutTargetCommits = computed(() => {
+      if (!hideWithTargetCommits.value) return filteredTasks.value;
+
+      return filteredTasks.value.filter(task => {
+        const noTargetCommits = !task.releaseCommits || Object.keys(task.releaseCommits).length === 0;
+
+        console.log(`Фильтр: ${task.key}, releaseCommits:`, task.releaseCommits, " -> ", noTargetCommits);
+
+        return noTargetCommits;
+      });
+    });
+
     watch(isDarkMode, (newVal) => {
       if (newVal) {
         document.body.classList.add('dark');
@@ -475,6 +503,8 @@ export default {
       handleCherryPickList,
       isSettingsLoading,
       isRefreshDisabled,
+      filteredTasksWithoutTargetCommits,
+      hideWithTargetCommits,
     };
   }
   ,
@@ -729,12 +759,16 @@ select {
 }
 
 @keyframes progress {
-  from { width: 0%; }
-  to { width: 100%; }
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
 }
 
 .animate-progress {
   animation: progress 2s linear infinite;
 }
-
 </style>
