@@ -2,12 +2,14 @@
 <template>
   <div :class="isDarkMode ? 'dark' : ''">
     <!-- Переключатель темы -->
-    <div class="fixed top-2 right-2">
+    <div class="min-h-screen w-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200">
+        <div class="fixed top-2 right-2">
       <label class="switch">
         <input type="checkbox" v-model="isDarkMode" />
         <span class="slider"></span>
       </label>
     </div>
+<div class="container mx-auto">
 
     <!-- Подкомпонент панели инструментов -->
     <AppToolbar
@@ -34,6 +36,8 @@
       @cherry-pick-request="handleCherryPickRequest"
       @cherry-pick-list="handleCherryPickList"
     />
+    </div>
+  </div>
   </div>
 </template>
 
@@ -220,5 +224,8 @@ body {
 }
 input:checked + .slider {
   background-color: #4caf50;
+}
+input:checked + .slider:before {
+  transform: translateX(26px);
 }
 </style>
