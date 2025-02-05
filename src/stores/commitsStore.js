@@ -154,6 +154,7 @@ export const useTasksStore = defineStore('tasksStore', {
       } else {
         this.selectedCommits.add(mrNumber);
       }
+      this.selectedCommits = new Set(this.selectedCommits);
       console.log('Updated selectedCommits:', Array.from(this.selectedCommits));
     },
     subscribeToTaskStatus() {
