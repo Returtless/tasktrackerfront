@@ -23,7 +23,7 @@
         <!-- Отображение таблицы, если есть данные -->
         <div v-else class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1000px]">
             <!-- Заголовок и фильтры -->
-            <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg">
+            <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg relative min-h-[150px]">
                 <h1 class="text-center text-xl font-bold">Commits Page</h1>
                 <!-- Новый блок управления в одной строке -->
                 <div class="flex items-center justify-between mt-2">
@@ -68,6 +68,20 @@
                         <span v-else>Cherry-pick Selected</span>
                     </button>
                 </div>
+                <!-- Строка состояния: показываем, только если статус обрабатывается -->
+                <transition name="slide-fade">
+                    <div v-if="tasksStore.loadingButtons.size > 0"
+                        class="my-2 relative w-full h-4 bg-gray-200 dark:bg-gray-600 rounded overflow-hidden">
+                        <!-- «Бегущий» градиент -->
+                        <div class="absolute inset-0 bg-blue-500 dark:bg-blue-400 animate-loading"></div>
+
+                        <!-- Текст статуса поверх полосы -->
+                        <div class="absolute inset-0 flex items-center justify-center text-white font-semibold text-sm">
+                            <!-- Выводим statusesLine, формируемый в computed -->
+                            <span>{{ statusesLine }}</span>
+                        </div>
+                    </div>
+                </transition>
             </div>
             <!-- Таблица -->
             <table class="table-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 w-full">
@@ -242,6 +256,31 @@ export default {
                 this.tasksStore.loadingListButton ||
                 !(this.tasksStore.selectedCommits && this.tasksStore.selectedCommits.size > 0)
             );
+        },
+        statusesLine() {
+            const results = [];
+            // Проходим по всем masterTasks
+            for (const task of this.tasksStore.masterTasks) {
+                // Проверяем, есть ли commits и хотя бы один mrNumber из loadingButtons
+                if (task.commits) {
+                    for (const commit of Object.values(task.commits)) {
+                        if (commit.mrNumber && this.tasksStore.loadingButtons.has(commit.mrNumber)) {
+                            // Добавляем "KEY -> <status из getTaskStatus>"
+                            const statusText = this.tasksStore.getTaskStatus(task.key);
+                            // Пример: "PRJ-123 → Processing..."
+                            results.push(`${task.key} → ${statusText}`);
+                            // Можно прервать, если хотите только один commit на задачу
+                            break;
+                        }
+                    }
+                }
+            }
+            // Если ничего не нашли, вернём "Processing..." (или пустую строку)
+            if (results.length === 0) {
+                return 'Processing cherry-pick...';
+            }
+            // Иначе объединим статусы через "; "
+            return results.join('; ');
         }
     },
     methods: {
@@ -292,5 +331,37 @@ export default {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* Анимация «бегущего» градиента */
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.animate-loading {
+    background: linear-gradient(90deg,
+            rgba(59, 130, 246, 1) 25%,
+            rgba(59, 130, 246, 0.5) 50%,
+            rgba(59, 130, 246, 1) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite linear;
+}
+
+/* Анимация slide-fade для плавного появления/исчезновения */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+    transition: all 0.5s ease;
+}
+
+.slide-fade-enter,
+.slide-fade-leave-to {
+    transform: translateY(-10px);
+    opacity: 0;
 }
 </style>
