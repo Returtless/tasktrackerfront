@@ -103,7 +103,9 @@
                             <ul class="list-none space-y-2">
                                 <li v-for="(commit, index) in (task.commits ? filteredCommits(task.commits) : [])"
                                     :key="commit?.mrNumber || index">
-                                    <input type="checkbox" :checked="tasksStore.selectedCommits?.has(commit?.mrNumber)"
+                                    <!-- Чекбокс отображаем ТОЛЬКО если transferred === false -->
+                                    <input v-if="!commit.transferred" type="checkbox"
+                                        :checked="tasksStore.selectedCommits?.has(commit?.mrNumber)"
                                         @change="commit?.mrNumber && $emit('toggle-commit-selection', commit.mrNumber)" />
                                 </li>
                             </ul>
@@ -124,10 +126,11 @@
                         <td class="p-4 text-center">
                             <ul class="list-none space-y-2">
                                 <li v-for="(commit, index) in (task.commits ? filteredCommits(task.commits) : [])"
-                                    :key="commit?.mrNumber || index" class="relative flex items-center space-x-1">
-                                    <button v-if="commit?.mrNumber" @click="openLink(commit.url)"
-                                        class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap truncate"
-                                        title="Открыть MR">
+                                    :key="commit?.mrNumber || index"
+                                    class="relative flex items-center justify-center space-x-1">
+                                    <button v-if="commit?.mrNumber" @click="openLink(commit.url)" :class="commit.transferred
+                                        ? 'bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600'
+                                        : 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600'">
                                         MR #{{ commit?.mrNumber }}
                                     </button>
                                     <button v-if="commit?.commit?.webUrl" @click="openLink(commit.commit.webUrl)"
@@ -151,7 +154,8 @@
                         <td class="p-4 text-center">
                             <ul class="list-none space-y-2">
                                 <li v-for="(commit, index) in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
-                                    :key="commit?.mrNumber || index" class="relative flex items-center space-x-1">
+                                    :key="commit?.mrNumber || index"
+                                    class="relative flex items-center justify-center space-x-1">
                                     <button v-if="commit?.mrNumber" @click="openLink(commit.url)"
                                         class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap truncate"
                                         title="Открыть MR">
@@ -168,16 +172,19 @@
                         <!-- Cherry-pick -->
                         <td class="p-4 text-center">
                             <ul class="list-none space-y-2">
-                                <li v-for="(commit, index) in (task.commits ? filteredCommits(task.commits) : [])"
-                                    :key="commit?.mrNumber || index" class="relative">
-                                    <button :disabled="tasksStore.loadingButtons.has(commit.mrNumber)"
+                                <li v-for="(commit, idx) in (task.commits ? filteredCommits(task.commits) : [])"
+                                    :key="commit?.mrNumber || idx" class="relative">
+                                    <!-- Кнопка Cherry-pick отображаем ТОЛЬКО если transferred === false -->
+                                    <button v-if="!commit.transferred"
+                                        :disabled="tasksStore.loadingButtons.has(commit.mrNumber)"
                                         @click="$emit('cherry-pick-request', commit.mrNumber, task.key)"
                                         class="relative flex justify-center items-center w-32 h-10 px-4 py-2 rounded text-white transition-all duration-300 ease-in-out"
-                                        :class="[tasksStore.loadingButtons.has(commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600']"
-                                        :title="tasksStore.loadingButtons.has(commit.mrNumber) ? tasksStore.getTaskStatus(task.key) : 'Cherry-pick'">
+                                        :class="[
+                                            tasksStore.loadingButtons.has(commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600'
+                                        ]">
                                         <span class="flex items-center justify-center w-full h-full">
                                             {{ tasksStore.loadingButtons.has(commit.mrNumber) ? 'Processing' :
-                                                'Cherry-pick' }}
+                                            'Cherry-pick' }}
                                         </span>
                                     </button>
                                 </li>
