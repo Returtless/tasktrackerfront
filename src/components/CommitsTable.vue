@@ -234,13 +234,26 @@ export default {
             }
         },
         localFilteredTasks() {
-            if (this.hideWithTargetCommits) {
-                return this.filteredTasksWithoutTargetCommits.filter(task => {
-                    return !task.releaseCommits || task.releaseCommits.length === 0;
-                });
-            }
-            return this.filteredTasksWithoutTargetCommits;
-        },
+    let tasks = this.hideWithTargetCommits
+        ? this.filteredTasksWithoutTargetCommits.filter(task => 
+            !task.releaseCommits || task.releaseCommits.length === 0
+        )
+        : this.filteredTasksWithoutTargetCommits;
+
+    // Дополнительно фильтруем задачи по выбранным авторам
+    if (this.localSelectedAuthors.length > 0) {
+        tasks = tasks.filter(task => {
+            if (!task.commits) return false;
+            return Object.values(task.commits).some(commit =>
+                this.localSelectedAuthors.includes(
+                    commit?.commit?.authorEmail?.split('@')[0] || ''
+                )
+            );
+        });
+    }
+
+    return tasks;
+},
         isCherryPickDisabled() {
             return (
                 this.tasksStore.isCherryPickListButtonDisabled ||
