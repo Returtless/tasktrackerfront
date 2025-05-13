@@ -1,7 +1,8 @@
-<!-- src/components/CommitsTable.vue -->
 <template>
+    <!-- Контейнер для таблицы, центрируем с container mx-auto -->
     <div class="commits-table container mx-auto py-8 px-4">
-        <!-- Если данные загружаются -->
+
+        <!-- Состояния загрузки/ошибки/пустых данных те же -->
         <div v-if="tasksStore.loading"
             class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1000px] p-4 text-center">
             <svg class="animate-spin h-6 w-6 text-blue-500 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -10,36 +11,38 @@
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
             </svg>
         </div>
-        <!-- Если произошла ошибка -->
         <div v-else-if="tasksStore.error"
             class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1000px] p-4 text-center text-red-500">
             {{ tasksStore.error }}
         </div>
-        <!-- Если нет данных для отображения -->
-        <div v-else-if="filteredTasksWithoutTargetCommits.length === 0"
+        <div v-else-if="localFilteredTasks.length === 0"
             class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1000px] p-4 text-center">
             <p class="text-gray-600">Нет данных для отображения</p>
         </div>
-        <!-- Отображение таблицы, если есть данные -->
+
+        <!-- Сама таблица, если есть данные -->
         <div v-else class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1000px]">
-            <!-- Заголовок и фильтры -->
-            <div class="bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg relative min-h-[150px]">
+
+            <!-- Шапка таблицы (заголовок Commits Page, фильтры, Cherry-pick Selected) -->
+            <div class="sticky top-[75px] z-20 bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg relative min-h-[150px]">
+                <!-- Заголовок -->
                 <h1 class="text-center text-xl font-bold">Commits Page</h1>
-                <!-- Новый блок управления в одной строке -->
+
+                <!-- Верхняя панель с фильтрами и кнопками -->
                 <div class="flex items-center justify-between mt-2">
                     <!-- Левая группа: multiselect и кнопка сортировки -->
                     <div class="flex items-center space-x-4">
-                        <multiselect v-model="localSelectedAuthors" :options="authorOptions" :multiple="true"
+                        <Multiselect v-model="localSelectedAuthors" :options="authorOptions" :multiple="true"
                             :show-labels="false" placeholder="Filter by Author" class="w-64" />
                         <button @click="$emit('toggle-date-sort')"
                             class="sort-date bg-gray-300 p-2 rounded hover:bg-gray-400 whitespace-nowrap text-center">
                             Sort by Date ({{ sortDirection.date }})
                         </button>
                     </div>
-                    <!-- Средняя группа: фильтрация All / Not cherry-picked -->
+
+                    <!-- Средняя группа: кнопки All / Not Cherry-picked -->
                     <div
                         class="inline-flex w-[300px] border border-gray-400 dark:border-gray-600 rounded-lg overflow-hidden shadow-md">
-                        <!-- Кнопка "Show All" -->
                         <button @click="hideWithTargetCommits = false"
                             class="flex-1 px-4 py-2 text-sm font-medium flex items-center justify-center transition-all duration-300 whitespace-nowrap"
                             :class="hideWithTargetCommits
@@ -47,8 +50,6 @@
                                 : 'bg-blue-600 text-white hover:bg-blue-700'">
                             All
                         </button>
-
-                        <!-- Кнопка "Hide Target Commits" -->
                         <button @click="hideWithTargetCommits = true"
                             class="flex-1 px-4 py-2 text-sm font-medium flex items-center justify-center transition-all duration-300 whitespace-nowrap"
                             :class="hideWithTargetCommits
@@ -57,7 +58,8 @@
                             Not cherry-picked
                         </button>
                     </div>
-                    <!-- Правая группа: кнопка Cherry-pick Selected -->
+
+                    <!-- Правая группа: Cherry-pick Selected -->
                     <button :disabled="isCherryPickDisabled" :class="[
                         'cherry-pick flex items-center justify-center px-4 py-2 rounded focus:outline-none focus:ring-2',
                         isCherryPickDisabled
@@ -68,7 +70,8 @@
                         <span v-else>Cherry-pick Selected</span>
                     </button>
                 </div>
-                <!-- Строка состояния: показываем, только если статус обрабатывается -->
+
+                <!-- Строка состояния (полоса) -->
                 <transition name="slide-fade">
                     <div v-if="tasksStore.loadingButtons.size > 0"
                         class="my-2 relative w-full h-4 bg-gray-200 dark:bg-gray-600 rounded overflow-hidden">
@@ -77,15 +80,15 @@
 
                         <!-- Текст статуса поверх полосы -->
                         <div class="absolute inset-0 flex items-center justify-center text-white font-semibold text-sm">
-                            <!-- Выводим statusesLine, формируемый в computed -->
                             <span>{{ statusesLine }}</span>
                         </div>
                     </div>
                 </transition>
             </div>
-            <!-- Таблица -->
+
+            <!-- Таблица с зафиксированным thead -->
             <table class="table-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 w-full">
-                <thead>
+               <thead class="sticky top-[225px] z-30 bg-white dark:bg-gray-700">
                     <tr>
                         <th class="border-b p-4 text-center w-1/12">Select</th>
                         <th class="border-b p-4 text-center w-2/12">Issue Key</th>
@@ -113,8 +116,7 @@
                         <!-- Issue Key -->
                         <td class="p-4 text-center">
                             <button @click="openLink(`https://job-jira.otr.ru/browse/${task.key}`)"
-                                class="bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 whitespace-nowrap truncate"
-                                title="Перейти к задаче">
+                                class="bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 whitespace-nowrap truncate">
                                 {{ task.key }}
                             </button>
                         </td>
@@ -125,17 +127,15 @@
                         <!-- Source Commits -->
                         <td class="p-4 text-center">
                             <ul class="list-none space-y-2">
-                                <li v-for="(commit, index) in (task.commits ? filteredCommits(task.commits) : [])"
-                                    :key="commit?.mrNumber || index"
-                                    class="relative flex items-center justify-center space-x-1">
+                                <li v-for="(commit, idx) in (task.commits ? filteredCommits(task.commits) : [])"
+                                    :key="commit?.mrNumber || idx" class="flex items-center justify-center space-x-1">
                                     <button v-if="commit?.mrNumber" @click="openLink(commit.url)" :class="commit.transferred
                                         ? 'bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600'
                                         : 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600'">
                                         MR #{{ commit?.mrNumber }}
                                     </button>
                                     <button v-if="commit?.commit?.webUrl" @click="openLink(commit.commit.webUrl)"
-                                        class="bg-purple-500 text-white w-6 h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center"
-                                        title="Open commit web URL">
+                                        class="bg-purple-500 text-white w-6 h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center">
                                         🔗
                                     </button>
                                 </li>
@@ -144,8 +144,8 @@
                         <!-- Author -->
                         <td class="p-4 text-center align-middle">
                             <ul class="list-none space-y-2">
-                                <li v-for="(commit, index) in (task.commits ? filteredCommits(task.commits) : [])"
-                                    :key="commit?.mrNumber || index" class="whitespace-nowrap">
+                                <li v-for="(commit, idx) in (task.commits ? filteredCommits(task.commits) : [])"
+                                    :key="commit?.mrNumber || idx" class="whitespace-nowrap">
                                     {{ commit?.commit?.authorEmail?.split('@')[0] || 'Unknown' }}
                                 </li>
                             </ul>
@@ -153,12 +153,10 @@
                         <!-- Target Commits -->
                         <td class="p-4 text-center">
                             <ul class="list-none space-y-2">
-                                <li v-for="(commit, index) in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
-                                    :key="commit?.mrNumber || index"
-                                    class="relative flex items-center justify-center space-x-1">
+                                <li v-for="(commit, idx) in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
+                                    :key="commit?.mrNumber || idx" class="flex items-center justify-center space-x-1">
                                     <button v-if="commit?.mrNumber" @click="openLink(commit.url)"
-                                        class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap truncate"
-                                        title="Открыть MR">
+                                        class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         MR #{{ commit?.mrNumber }}
                                     </button>
                                     <button v-if="commit?.commit?.webUrl" @click="openLink(commit.commit.webUrl)"
@@ -174,7 +172,6 @@
                             <ul class="list-none space-y-2">
                                 <li v-for="(commit, idx) in (task.commits ? filteredCommits(task.commits) : [])"
                                     :key="commit?.mrNumber || idx" class="relative">
-                                    <!-- Кнопка Cherry-pick отображаем ТОЛЬКО если transferred === false -->
                                     <button v-if="!commit.transferred"
                                         :disabled="tasksStore.loadingButtons.has(commit.mrNumber)"
                                         @click="$emit('cherry-pick-request', commit.mrNumber, task.key)"
@@ -228,7 +225,6 @@ export default {
         };
     },
     computed: {
-        // Локальное вычисляемое свойство для двусторонней привязки selectedAuthors
         localSelectedAuthors: {
             get() {
                 return this.selectedAuthors;
@@ -237,18 +233,6 @@ export default {
                 this.$emit('update:selectedAuthors', val);
             }
         },
-        authorOptions() {
-            const authors = new Set();
-            this.tasksStore.masterTasks.forEach(task => {
-                Object.values(task.commits || {}).forEach(commit => {
-                    if (commit.commit && commit.commit.authorEmail) {
-                        authors.add(commit.commit.authorEmail.split('@')[0]);
-                    }
-                });
-            });
-            return Array.from(authors).sort((a, b) => a.localeCompare(b));
-        },
-        // Применяем локальную фильтрацию, если hideWithTargetCommits true
         localFilteredTasks() {
             if (this.hideWithTargetCommits) {
                 return this.filteredTasksWithoutTargetCommits.filter(task => {
@@ -264,29 +248,34 @@ export default {
                 !(this.tasksStore.selectedCommits && this.tasksStore.selectedCommits.size > 0)
             );
         },
+        authorOptions() {
+            // Как раньше: собираем авторов
+            const authors = new Set();
+            this.tasksStore.masterTasks.forEach(task => {
+                Object.values(task.commits || {}).forEach(commit => {
+                    if (commit.commit && commit.commit.authorEmail) {
+                        authors.add(commit.commit.authorEmail.split('@')[0]);
+                    }
+                });
+            });
+            return Array.from(authors).sort((a, b) => a.localeCompare(b));
+        },
         statusesLine() {
             const results = [];
-            // Проходим по всем masterTasks
             for (const task of this.tasksStore.masterTasks) {
-                // Проверяем, есть ли commits и хотя бы один mrNumber из loadingButtons
                 if (task.commits) {
                     for (const commit of Object.values(task.commits)) {
                         if (commit.mrNumber && this.tasksStore.loadingButtons.has(commit.mrNumber)) {
-                            // Добавляем "KEY -> <status из getTaskStatus>"
                             const statusText = this.tasksStore.getTaskStatus(task.key);
-                            // Пример: "PRJ-123 → Processing..."
                             results.push(`${task.key} → ${statusText}`);
-                            // Можно прервать, если хотите только один commit на задачу
                             break;
                         }
                     }
                 }
             }
-            // Если ничего не нашли, вернём "Processing..." (или пустую строку)
             if (results.length === 0) {
                 return 'Processing cherry-pick...';
             }
-            // Иначе объединим статусы через "; "
             return results.join('; ');
         }
     },
@@ -296,11 +285,8 @@ export default {
         },
         formatDate(dateStr) {
             return new Date(dateStr).toLocaleString('ru-RU', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
             }).replace(',', '');
         },
         filteredCommits(commits) {
@@ -331,16 +317,16 @@ export default {
 }
 
 @keyframes spin {
-    from {
+    0% {
         transform: rotate(0deg);
     }
 
-    to {
+    100% {
         transform: rotate(360deg);
     }
 }
 
-/* Анимация «бегущего» градиента */
+/* "бегущий" градиент */
 @keyframes loading {
     0% {
         background-position: 200% 0;
@@ -360,7 +346,7 @@ export default {
     animation: loading 1.5s infinite linear;
 }
 
-/* Анимация slide-fade для плавного появления/исчезновения */
+/* Анимация slide-fade */
 .slide-fade-enter-active,
 .slide-fade-leave-active {
     transition: all 0.5s ease;
@@ -370,5 +356,11 @@ export default {
 .slide-fade-leave-to {
     transform: translateY(-10px);
     opacity: 0;
+}
+
+/* thead "sticky" */
+thead.sticky {
+    position: sticky;
+    z-index: 10;
 }
 </style>

@@ -1,43 +1,34 @@
-<!-- src/components/CommitsPage.vue -->
 <template>
+  <!-- Темная тема, как у вас -->
   <div :class="isDarkMode ? 'dark' : ''">
-    <!-- Переключатель темы -->
-    <div class="min-h-screen w-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200">
-        <div class="fixed top-2 right-2">
-      <label class="switch">
-        <input type="checkbox" v-model="isDarkMode" />
-        <span class="slider"></span>
-      </label>
-    </div>
-<div class="container mx-auto">
+    <!-- Фон и мин-высота -->
+    <div class="min-h-screen w-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 relative">
+      <!-- Переключатель темы -->
+      <div class="fixed top-2 right-2">
+        <label class="switch">
+          <input type="checkbox" v-model="isDarkMode" />
+          <span class="slider"></span>
+        </label>
+      </div>
 
-    <!-- Подкомпонент панели инструментов -->
-    <AppToolbar
-      :is-settings-loading="isSettingsLoading"
-      :settings="settings"
-      v-model:selectedGitlabUrl="selectedGitlabUrl"
-      v-model:selectedProjectId="selectedProjectId"
-      v-model:sourceBranch="sourceBranch"
-      v-model:targetBranch="targetBranch"
-      v-model:patchNumber="patchNumber"
-      v-model:startDate="startDate"
-      :is-refresh-disabled="isRefreshDisabled"
-      @refresh-table="refreshTable"
-      @toggle-date-sort="toggleDateSort"
-    />
+      <div class="container mx-auto">
+        <div class="sticky top-0 z-40 bg-gray-200 dark:bg-gray-800 shadow-lg">
+          <AppToolbar :is-settings-loading="isSettingsLoading" :settings="settings"
+            v-model:selectedGitlabUrl="selectedGitlabUrl" v-model:selectedProjectId="selectedProjectId"
+            v-model:sourceBranch="sourceBranch" v-model:targetBranch="targetBranch" v-model:patchNumber="patchNumber"
+            v-model:startDate="startDate" :is-refresh-disabled="isRefreshDisabled" @refresh-table="refreshTable"
+            @toggle-date-sort="toggleDateSort" />
+        </div>
 
-    <!-- Подкомпонент таблицы коммитов -->
-    <CommitsTable
-      :tasks-store="tasksStore"
-      :filtered-tasks-without-target-commits="filteredTasksWithoutTargetCommits"
-      v-model:selectedAuthors="selectedAuthors"
-      :sort-direction="sortDirection"
-      @toggle-commit-selection="handleToggleCommitSelection"
-      @cherry-pick-request="handleCherryPickRequest"
-      @cherry-pick-list="handleCherryPickList"
-    />
+        <div class="container mx-auto px-4">
+          <CommitsTable :tasks-store="tasksStore"
+            :filtered-tasks-without-target-commits="filteredTasksWithoutTargetCommits"
+            v-model:selectedAuthors="selectedAuthors" :sort-direction="sortDirection"
+            @toggle-commit-selection="handleToggleCommitSelection" @cherry-pick-request="handleCherryPickRequest"
+            @cherry-pick-list="handleCherryPickList" />
+        </div>
+      </div>
     </div>
-  </div>
   </div>
 </template>
 
@@ -80,7 +71,6 @@ export default {
 
     // Пример вычисляемого свойства для фильтрации задач
     const filteredTasksWithoutTargetCommits = computed(() => {
-      // Можно использовать getter из store или свою логику
       return tasksStore.masterTasks;
     });
 
@@ -107,14 +97,12 @@ export default {
       sortDirection.value.date = sortDirection.value.date === 'asc' ? 'desc' : 'asc';
     };
 
-    // Обработчик события toggle-commit-selection
     const handleToggleCommitSelection = (mrNumber) => {
       tasksStore.toggleCommitSelection(mrNumber);
     };
 
-    // Обработчик события cherry-pick-request
     const handleCherryPickRequest = (mrNumber, taskKey) => {
-      tasksStore.sendCherryPickRequest({ 
+      tasksStore.sendCherryPickRequest({
         gitlabUrl: selectedGitlabUrl.value,
         projectId: selectedProjectId.value,
         branchFrom: sourceBranch.value,
@@ -124,7 +112,6 @@ export default {
       });
     };
 
-    // Обработчик события cherry-pick-list
     const handleCherryPickList = () => {
       const mrNumbers = Array.from(tasksStore.selectedCommits);
       tasksStore.sendCherryPickList({
@@ -178,28 +165,30 @@ export default {
 </script>
 
 <style>
-/* Глобальные стили можно разместить здесь */
 body {
   margin: 0;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
+
 .dark body {
   background-color: #121212;
   color: #ffffff;
 }
 
-/* Стили переключателя темы */
+/* Переключатель темы */
 .switch {
   position: relative;
   display: inline-block;
   width: 60px;
   height: 34px;
 }
+
 .switch input {
   opacity: 0;
   width: 0;
   height: 0;
 }
+
 .slider {
   position: absolute;
   cursor: pointer;
@@ -211,6 +200,7 @@ body {
   transition: 0.4s;
   border-radius: 34px;
 }
+
 .slider:before {
   position: absolute;
   content: '';
@@ -222,10 +212,12 @@ body {
   transition: 0.4s;
   border-radius: 50%;
 }
-input:checked + .slider {
+
+input:checked+.slider {
   background-color: #4caf50;
 }
-input:checked + .slider:before {
+
+input:checked+.slider:before {
   transform: translateX(26px);
 }
 </style>
