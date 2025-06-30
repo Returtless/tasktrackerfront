@@ -4,7 +4,7 @@
 
         <!-- Состояния загрузки/ошибки/пустых данных те же -->
         <div v-if="tasksStore.loading"
-            class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1000px] p-4 text-center">
+            class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px] p-4 text-center">
             <svg class="animate-spin h-6 w-6 text-blue-500 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none"
                 viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -12,19 +12,20 @@
             </svg>
         </div>
         <div v-else-if="tasksStore.error"
-            class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1000px] p-4 text-center text-red-500">
+            class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px] p-4 text-center text-red-500">
             {{ tasksStore.error }}
         </div>
         <div v-else-if="localFilteredTasks.length === 0"
-            class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1000px] p-4 text-center">
+            class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px] p-4 text-center">
             <p class="text-gray-600">Нет данных для отображения</p>
         </div>
 
         <!-- Сама таблица, если есть данные -->
-        <div v-else class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1000px]">
+        <div v-else class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px]">
 
             <!-- Шапка таблицы (заголовок Commits Page, фильтры, Cherry-pick Selected) -->
-            <div class="sticky top-[75px] z-20 bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg relative min-h-[150px]">
+            <div
+                class="sticky top-[75px] z-20 bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg relative min-h-[150px]">
                 <!-- Заголовок -->
                 <h1 class="text-center text-xl font-bold">Commits Page</h1>
 
@@ -88,15 +89,16 @@
 
             <!-- Таблица с зафиксированным thead -->
             <table class="table-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 w-full">
-               <thead class="sticky top-[225px] z-30 bg-white dark:bg-gray-700">
+                <thead class="sticky top-[225px] z-30 bg-white dark:bg-gray-700">
                     <tr>
-                        <th class="border-b p-4 text-center w-1/12">Select</th>
-                        <th class="border-b p-4 text-center w-2/12">Issue Key</th>
-                        <th class="border-b p-4 text-center w-2/12">Date</th>
-                        <th class="border-b p-4 text-center w-3/12">Source Commits</th>
-                        <th class="border-b p-4 text-center w-2/12">Author</th>
-                        <th class="border-b p-4 text-center w-3/12">Target Commits</th>
-                        <th class="border-b p-4 text-center w-2/12">Cherry-pick</th>
+                        <th class="border-b p-4 text-center w-1/20">Select</th>
+                        <th class="border-b p-4 text-center w-3/20">Issue Key</th>
+                        <th class="border-b p-4 text-center w-3/20">Improvement Status</th>
+                        <th class="border-b p-4 text-center w-1/10">Date</th>
+                        <th class="border-b p-4 text-center w-3/20">Source Commits</th>
+                        <th class="border-b p-4 text-center w-1/10">Author</th>
+                        <th class="border-b p-4 text-center w-3/20">Target Commits</th>
+                        <th class="border-b p-4 text-center w-3/20">Cherry-pick</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -120,9 +122,13 @@
                                 {{ task.key }}
                             </button>
                         </td>
+                        <!-- Improvement Status -->
+                        <td class="p-4 text-center align-middle" :title="task.improvementName">
+                            {{ task.status }}
+                        </td>
                         <!-- Date -->
                         <td class="p-4 text-center whitespace-nowrap">
-                            {{ formatDate(task.date) }}
+                            {{ getDisplayDateForTask(task) ? formatDate(getDisplayDateForTask(task)) : 'N/A' }}
                         </td>
                         <!-- Source Commits -->
                         <td class="p-4 text-center">
@@ -234,25 +240,59 @@ export default {
             }
         },
         localFilteredTasks() {
-    let tasks = this.hideWithTargetCommits
+    let tasksToFilter = this.hideWithTargetCommits
         ? this.filteredTasksWithoutTargetCommits.filter(task => 
-            !task.releaseCommits || task.releaseCommits.length === 0
+            !task.releaseCommits || task.releaseCommits.length === 0 // Assuming releaseCommits is an array from store
         )
-        : this.filteredTasksWithoutTargetCommits;
+        : [...this.filteredTasksWithoutTargetCommits]; // Create a shallow copy for sorting
 
     // Дополнительно фильтруем задачи по выбранным авторам
     if (this.localSelectedAuthors.length > 0) {
-        tasks = tasks.filter(task => {
+        tasksToFilter = tasksToFilter.filter(task => {
             if (!task.commits) return false;
             return Object.values(task.commits).some(commit =>
                 this.localSelectedAuthors.includes(
-                    commit?.commit?.authorEmail?.split('@')[0] || ''
+                    (commit?.commit?.authorEmail?.split('@')[0] || '')
                 )
             );
         });
     }
 
-    return tasks;
+    // Date sorting
+    tasksToFilter.sort((a, b) => {
+      const dateA = this.getTaskSortDate(a);
+      const dateB = this.getTaskSortDate(b);
+
+      const aHasCommitDate = dateA !== null;
+      const bHasCommitDate = dateB !== null;
+
+      // Prioritize tasks with commit dates
+      if (aHasCommitDate && !bHasCommitDate) return -1;
+      if (!aHasCommitDate && bHasCommitDate) return 1;
+      
+      if (!aHasCommitDate && !bHasCommitDate) {
+        // Both tasks have no commit dates, sort by original task.date (e.g., Jira date)
+        const fallbackDateA = a.date ? new Date(a.date) : null;
+        const fallbackDateB = b.date ? new Date(b.date) : null;
+
+        if (fallbackDateA instanceof Date && !isNaN(fallbackDateA) && !(fallbackDateB instanceof Date && !isNaN(fallbackDateB))) return -1;
+        if (!(fallbackDateA instanceof Date && !isNaN(fallbackDateA)) && fallbackDateB instanceof Date && !isNaN(fallbackDateB)) return 1;
+        if (!(fallbackDateA instanceof Date && !isNaN(fallbackDateA)) && !(fallbackDateB instanceof Date && !isNaN(fallbackDateB))) return a.key.localeCompare(b.key);
+
+        if (fallbackDateA.getTime() === fallbackDateB.getTime()) {
+            return a.key.localeCompare(b.key); // Secondary sort by key
+        }
+        return this.sortDirection.date === 'asc' ? fallbackDateA - fallbackDateB : fallbackDateB - fallbackDateA;
+      }
+
+      // Both tasks have commit dates
+      if (dateA.getTime() === dateB.getTime()) {
+          return a.key.localeCompare(b.key); // Secondary sort by key for stable order
+      }
+      return this.sortDirection.date === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+
+    return tasksToFilter;
 },
         isCherryPickDisabled() {
             return (
@@ -293,6 +333,29 @@ export default {
         }
     },
     methods: {
+        getTaskSortDate(task) {
+            if (!task.commits || Object.keys(task.commits).length === 0) {
+                return null; 
+            }
+            const commitDates = Object.values(task.commits)
+                .map(c => c.commit?.authoredDate ? new Date(c.commit.authoredDate) : null)
+                .filter(d => d instanceof Date && !isNaN(d.getTime())); // Ensure 'd' is a valid Date object
+
+            if (commitDates.length === 0) return null; // No valid commit dates found
+
+            if (this.sortDirection.date === 'asc') {
+                // Earliest commit date for ascending sort
+                return new Date(Math.min.apply(null, commitDates));
+            } else {
+                // Latest commit date for descending sort
+                return new Date(Math.max.apply(null, commitDates));
+            }
+        },
+        getDisplayDateForTask(task) {
+            // Display the date used for sorting if available, otherwise fallback to task.date
+            const sortDate = this.getTaskSortDate(task);
+            return sortDate ? sortDate : (task.date && !isNaN(new Date(task.date).getTime()) ? new Date(task.date) : null);
+        },
         openLink(url) {
             window.open(url, '_blank');
         },

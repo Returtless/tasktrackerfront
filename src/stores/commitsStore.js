@@ -17,7 +17,7 @@ export const useTasksStore = defineStore('tasksStore', {
   actions: {
     async fetchSettings() {
       try {
-        const response = await axios.get('http://localhost:8080/api/settings');
+        const response = await axios.get('/api/settings');
         return response.data;
       } catch (error) {
         console.error('Error fetching settings:', error);
@@ -30,7 +30,7 @@ export const useTasksStore = defineStore('tasksStore', {
       this.error = null;
     
       try {
-        const response = await axios.post('http://localhost:8080/api/commits', payload);
+        const response = await axios.post('/api/commits', payload);
         const masterTasks = response.data.masterTasks;
         const releaseTasks = response.data.releaseTasks;
     
@@ -57,7 +57,7 @@ export const useTasksStore = defineStore('tasksStore', {
     async sendCherryPickRequest(payload) {
       try {
         this.loadingButtons.add(payload.mrNumber);
-        const response = await axios.post('http://localhost:8080/api/cherrypick', payload);
+        const response = await axios.post('/api/cherrypick', payload);
     
         const taskInfo = response.data;
     
@@ -111,7 +111,7 @@ export const useTasksStore = defineStore('tasksStore', {
       this.loadingListButton = true;
     
       try {
-        const response = await axios.post('http://localhost:8080/api/cherrypicklist', payload);
+        const response = await axios.post('/api/cherrypicklist', payload);
     
         const taskInfos = response.data;
     
@@ -158,7 +158,7 @@ export const useTasksStore = defineStore('tasksStore', {
       console.log('Updated selectedCommits:', Array.from(this.selectedCommits));
     },
     subscribeToTaskStatus() {
-      const eventSource = new EventSource('http://localhost:8080/api/task-status');
+      const eventSource = new EventSource('/api/task-status');
 
       eventSource.onmessage = (event) => {
         const statusUpdate = JSON.parse(event.data);
