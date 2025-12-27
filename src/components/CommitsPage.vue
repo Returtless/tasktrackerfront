@@ -16,8 +16,9 @@
           <AppToolbar :is-settings-loading="isSettingsLoading" :settings="settings"
             v-model:selectedGitlabUrl="selectedGitlabUrl" v-model:selectedProjectId="selectedProjectId"
             v-model:sourceBranch="sourceBranch" v-model:targetBranch="targetBranch" v-model:patchNumber="patchNumber"
-            v-model:startDate="startDate" :is-refresh-disabled="isRefreshDisabled" @refresh-table="refreshTable"
-            @toggle-date-sort="toggleDateSort" />
+            :is-refresh-disabled="isRefreshDisabled" 
+            :patches="tasksStore.patches" :patches-loading="tasksStore.patchesLoading"
+            @refresh-table="refreshTable" />
         </div>
 
         <div class="container mx-auto px-4">
@@ -25,7 +26,7 @@
             :filtered-tasks-without-target-commits="filteredTasksWithoutTargetCommits"
             v-model:selectedAuthors="selectedAuthors" :sort-direction="sortDirection"
             @toggle-commit-selection="handleToggleCommitSelection" @cherry-pick-request="handleCherryPickRequest"
-            @cherry-pick-list="handleCherryPickList" />
+            @cherry-pick-list="handleCherryPickList" @toggle-mr-number-sort="toggleMrNumberSort" />
         </div>
       </div>
     </div>
@@ -51,13 +52,12 @@ export default {
     const sourceBranch = ref('');
     const targetBranch = ref('');
     const patchNumber = ref('');
-    const startDate = ref('');
     const isSettingsLoading = ref(true);
     const isDarkMode = ref(false);
 
     // Дополнительные состояния
     const selectedAuthors = ref([]);
-    const sortDirection = ref({ date: 'asc' });
+    const sortDirection = ref({ mrNumber: null }); // null означает, что сортировка по MR не включена
 
     const isRefreshDisabled = computed(() => {
       return (
@@ -74,17 +74,51 @@ export default {
       return tasksStore.masterTasks;
     });
 
+    // Функция для извлечения ключа проекта из имени проекта
+    const extractProjectKey = (projectName) => {
+      if (!projectName) return 'SPPDEV';
+      // Если имя содержит дефис, берем часть до дефиса
+      let projectKey = projectName.includes('-') 
+        ? projectName.split('-')[0] 
+        : projectName;
+      
+      // Костыль: в GitLab проект называется SPS, а в Jira - SPPDEV
+      // Поэтому нужно преобразовать SPS -> SPPDEV для запросов к Jira
+      if (projectKey === 'SPS') {
+        return 'SPPDEV';
+      }
+      
+      return projectKey;
+    };
+
+    // Получаем ключ проекта из выбранного проекта
+    const selectedProjectKey = computed(() => {
+      if (!selectedProjectId.value || !settings.value.gitlabUrls) return 'SPPDEV';
+      
+      const urlData = settings.value.gitlabUrls.find(
+        url => url.url === selectedGitlabUrl.value
+      );
+      if (!urlData || !urlData.projects) return 'SPPDEV';
+      
+      const project = urlData.projects.find(
+        proj => proj.id === selectedProjectId.value
+      );
+      if (!project || !project.name) return 'SPPDEV';
+      
+      return extractProjectKey(project.name);
+    });
+
     // Методы
     const refreshTable = async () => {
       try {
         tasksStore.loading = true;
+        console.log('Sending request with patchNumber:', patchNumber.value);
         await tasksStore.fetchCommits({
           gitlabUrl: selectedGitlabUrl.value,
           projectId: selectedProjectId.value,
           sourceBranch: sourceBranch.value,
           targetBranch: targetBranch.value,
           patchNumber: patchNumber.value,
-          startDate: startDate.value,
         });
       } catch (error) {
         console.error('Error refreshing table:', error);
@@ -93,8 +127,22 @@ export default {
       }
     };
 
-    const toggleDateSort = () => {
-      sortDirection.value.date = sortDirection.value.date === 'asc' ? 'desc' : 'asc';
+    const toggleMrNumberSort = () => {
+      // Создаем новый объект для гарантии реактивности
+      // Переключаем между тремя состояниями: null -> 'asc' -> 'desc' -> null
+      let newDirection;
+      if (sortDirection.value.mrNumber === null) {
+        newDirection = 'asc';
+      } else if (sortDirection.value.mrNumber === 'asc') {
+        newDirection = 'desc';
+      } else {
+        newDirection = null; // Возврат к обычному режиму
+      }
+      
+      sortDirection.value = {
+        ...sortDirection.value,
+        mrNumber: newDirection
+      };
     };
 
     const handleToggleCommitSelection = (mrNumber) => {
@@ -127,11 +175,52 @@ export default {
       document.body.classList.toggle('dark', newVal);
     });
 
+    // Получаем список веток для выбранного проекта
+    const availableBranches = computed(() => {
+      if (!selectedProjectId.value || !settings.value.gitlabUrls) return [];
+      
+      const urlData = settings.value.gitlabUrls.find(
+        url => url.url === selectedGitlabUrl.value
+      );
+      if (!urlData || !urlData.projects) return [];
+      
+      const project = urlData.projects.find(
+        proj => proj.id === selectedProjectId.value
+      );
+      if (!project || !project.branches) return [];
+      
+      return project.branches;
+    });
+
+    // Автоматически выбираем ветки master и release, когда появляются ветки проекта
+    watch(availableBranches, (branches) => {
+      if (!branches || branches.length === 0) return;
+
+      // Ищем ветку "master" для sourceBranch (только если ещё не выбрана)
+      if (!sourceBranch.value && branches.includes('master')) {
+        sourceBranch.value = 'master';
+      }
+
+      // Ищем ветку "release" для targetBranch (только если ещё не выбрана)
+      if (!targetBranch.value && branches.includes('release')) {
+        targetBranch.value = 'release';
+      }
+    });
+
+    // Перезагружаем патчи при изменении проекта
+    watch(selectedProjectKey, async (newProjectKey) => {
+      if (newProjectKey && selectedProjectId.value && !isSettingsLoading.value) {
+        await tasksStore.fetchPatches(newProjectKey);
+      }
+    });
+
     onMounted(async () => {
       try {
         isSettingsLoading.value = true;
         settings.value = await tasksStore.fetchSettings();
         tasksStore.subscribeToTaskStatus();
+        // Загружаем патчи из Jira с ключом проекта по умолчанию
+        await tasksStore.fetchPatches('SPPDEV');
       } catch (error) {
         console.error('Error loading settings:', error);
       } finally {
@@ -147,7 +236,6 @@ export default {
       sourceBranch,
       targetBranch,
       patchNumber,
-      startDate,
       isSettingsLoading,
       isDarkMode,
       selectedAuthors,
@@ -155,7 +243,7 @@ export default {
       isRefreshDisabled,
       filteredTasksWithoutTargetCommits,
       refreshTable,
-      toggleDateSort,
+      toggleMrNumberSort,
       handleToggleCommitSelection,
       handleCherryPickRequest,
       handleCherryPickList,

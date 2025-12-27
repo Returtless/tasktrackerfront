@@ -45,11 +45,30 @@
         </select>
       </div>
 
-      <!-- Поля Patch Number, Start Date и кнопка Refresh -->
+      <!-- Поля Patch Number и кнопка Refresh -->
       <div class="flex items-center gap-4">
-        <input type="text" v-model="localPatchNumber" placeholder="Patch Number"
-          class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white" />
-        <input type="date" v-model="localStartDate" class="p-2 border rounded w-40 dark:bg-gray-700 dark:text-white" />
+        <div class="relative w-64">
+          <select v-model="localPatchNumber" 
+            class="p-2 border rounded w-full dark:bg-gray-700 dark:text-white pr-8"
+            :disabled="patchesLoading || !selectedProjectId">
+            <option value="" disabled>
+              {{ patchesLoading ? 'Загрузка патчей...' : 'Выберите патч' }}
+            </option>
+            <option v-for="patch in patches" :key="patch.key" :value="patch.key">
+              {{ patch.summary || patch.key }}
+            </option>
+          </select>
+          <!-- Индикатор загрузки -->
+          <div v-if="patchesLoading" 
+            class="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+            <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+          </div>
+        </div>
         <button @click="$emit('refresh-table')"
           class="refresh-button bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
           :disabled="isRefreshDisabled">
@@ -92,13 +111,17 @@ export default {
       type: String,
       required: true
     },
-    startDate: {
-      type: String,
-      required: true
-    },
     isRefreshDisabled: {
       type: Boolean,
       required: true
+    },
+    patches: {
+      type: Array,
+      default: () => []
+    },
+    patchesLoading: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {
@@ -141,14 +164,6 @@ export default {
       },
       set(val) {
         this.$emit('update:patchNumber', val);
-      }
-    },
-    localStartDate: {
-      get() {
-        return this.startDate;
-      },
-      set(val) {
-        this.$emit('update:startDate', val);
       }
     },
 

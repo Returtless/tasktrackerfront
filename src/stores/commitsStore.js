@@ -12,6 +12,8 @@ export const useTasksStore = defineStore('tasksStore', {
     error: null,
     loadingButtons: new Set(),
     taskStatuses: {}, // Храним статусы для каждого taskKey
+    patches: [], // Список патчей из Jira
+    patchesLoading: false, // Загрузка патчей
   }),
 
   actions: {
@@ -22,6 +24,26 @@ export const useTasksStore = defineStore('tasksStore', {
       } catch (error) {
         console.error('Error fetching settings:', error);
         throw error;
+      }
+    },
+
+    async fetchPatches(projectKey = 'SPPDEV') {
+      this.patchesLoading = true;
+      try {
+        const response = await axios.get('/api/patches', {
+          params: { projectKey }
+        });
+        this.patches = response.data || [];
+      } catch (error) {
+        console.error('Error fetching patches:', error);
+        this.patches = [];
+        showNotification({
+          title: 'Error',
+          text: 'Failed to load patches from Jira',
+          type: 'error',
+        });
+      } finally {
+        this.patchesLoading = false;
       }
     },
     
@@ -78,6 +100,15 @@ export const useTasksStore = defineStore('tasksStore', {
             : Object.values(taskInfo.commits || {});
     
           task.releaseCommits.push(...commitsToAdd);
+
+          // Помечаем исходный коммит как перенесённый, чтобы скрыть кнопку Cherry-pick
+          if (task.commits) {
+            Object.values(task.commits).forEach((commit) => {
+              if (commit && commit.mrNumber === payload.mrNumber) {
+                commit.transferred = true;
+              }
+            });
+          }
     
           showNotification({
             title: 'Success',
@@ -125,12 +156,42 @@ export const useTasksStore = defineStore('tasksStore', {
             });
           });
         } else {
+          // Обновляем состояние задач: добавляем releaseCommits и помечаем выбранные коммиты как transferred
+          const selectedMrNumbers = new Set(payload.mrNumbers || []);
+          
+          taskInfos.forEach((taskInfo) => {
+            const task = this.masterTasks.find((t) => t.key === taskInfo.key);
+            if (task) {
+              // Преобразуем commits из Map в массив
+              const commitsToAdd = Array.isArray(taskInfo.commits)
+                ? taskInfo.commits
+                : Object.values(taskInfo.commits || {});
+              
+              // Добавляем releaseCommits (новый MR)
+              if (!task.releaseCommits) {
+                task.releaseCommits = [];
+              }
+              task.releaseCommits.push(...commitsToAdd);
+              
+              // Помечаем все выбранные коммиты этой задачи как transferred
+              if (task.commits) {
+                Object.values(task.commits).forEach((commit) => {
+                  if (commit.mrNumber && selectedMrNumbers.has(commit.mrNumber)) {
+                    commit.transferred = true;
+                  }
+                });
+              }
+            }
+          });
+          
+          // Очищаем выбранные коммиты
+          this.selectedCommits.clear();
+          
           showNotification({
             title: 'Success',
             text: `Cherry-pick request sent successfully for ${taskInfos.length} tasks.`,
             type: 'success',
           });
-          this.selectedCommits.clear();
         }
       } catch (error) {
         const errorMessage = error.response?.data?.errorMessage || error.message || 'Unknown error';

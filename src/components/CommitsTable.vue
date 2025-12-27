@@ -15,13 +15,13 @@
             class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px] p-4 text-center text-red-500">
             {{ tasksStore.error }}
         </div>
-        <div v-else-if="localFilteredTasks.length === 0"
+        <div v-else-if="(isMrNumberSortActive && flattenedMrList.length === 0) || (!isMrNumberSortActive && localFilteredTasks.length === 0)"
             class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px] p-4 text-center">
             <p class="text-gray-600">Нет данных для отображения</p>
         </div>
 
         <!-- Сама таблица, если есть данные -->
-        <div v-else class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px]">
+        <div v-else-if="(isMrNumberSortActive && flattenedMrList.length > 0) || (!isMrNumberSortActive && localFilteredTasks.length > 0)" class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px]">
 
             <!-- Шапка таблицы (заголовок Commits Page, фильтры, Cherry-pick Selected) -->
             <div
@@ -35,9 +35,9 @@
                     <div class="flex items-center space-x-4">
                         <Multiselect v-model="localSelectedAuthors" :options="authorOptions" :multiple="true"
                             :show-labels="false" placeholder="Filter by Author" class="w-64" />
-                        <button @click="$emit('toggle-date-sort')"
-                            class="sort-date bg-gray-300 p-2 rounded hover:bg-gray-400 whitespace-nowrap text-center">
-                            Sort by Date ({{ sortDirection.date }})
+                        <button @click="$emit('toggle-mr-number-sort')"
+                            class="sort-mr-number bg-gray-300 p-2 rounded hover:bg-gray-400 whitespace-nowrap text-center">
+                            Sort by MR number{{ currentSortDirection ? ` (${currentSortDirection})` : ' (off)' }}
                         </button>
                     </div>
 
@@ -102,7 +102,79 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="task in localFilteredTasks" :key="task.key" class="border-b">
+                    <!-- Режим сортировки по MR number: плоский список -->
+                    <template v-if="isMrNumberSortActive">
+                        <tr v-for="item in flattenedMrList" :key="`${item.task.key}-${item.commit.mrNumber}`" class="border-b">
+                            <!-- Select -->
+                            <td class="p-4 text-center">
+                                <input v-if="!item.commit.transferred" type="checkbox"
+                                    :checked="tasksStore.selectedCommits?.has(item.commit?.mrNumber)"
+                                    @change="item.commit?.mrNumber && $emit('toggle-commit-selection', item.commit.mrNumber)" />
+                            </td>
+                            <!-- Issue Key -->
+                            <td class="p-4 text-center">
+                                <button @click="openLink(`https://job-jira.otr.ru/browse/${item.task.key}`)"
+                                    class="bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 whitespace-nowrap truncate">
+                                    {{ item.task.key }}
+                                </button>
+                            </td>
+                            <!-- Improvement Status -->
+                            <td class="p-4 text-center align-middle" :title="item.task.improvementName">
+                                {{ item.task.status }}
+                            </td>
+                            <!-- Date -->
+                            <td class="p-4 text-center whitespace-nowrap">
+                                {{ getDisplayDateForTask(item.task) ? formatDate(getDisplayDateForTask(item.task)) : 'N/A' }}
+                            </td>
+                            <!-- Source Commits -->
+                            <td class="p-4 text-center">
+                                <div class="flex items-center justify-center space-x-1">
+                                    <button v-if="item.commit?.mrNumber" @click="openLink(item.commit.url)" :class="item.commit.transferred
+                                        ? 'bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600'
+                                        : 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600'">
+                                        MR #{{ item.commit?.mrNumber }}
+                                    </button>
+                                    <button v-if="item.commit?.commit?.webUrl" @click="openLink(item.commit.commit.webUrl)"
+                                        class="bg-purple-500 text-white w-6 h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center">
+                                        🔗
+                                    </button>
+                                </div>
+                            </td>
+                            <!-- Author -->
+                            <td class="p-4 text-center align-middle whitespace-nowrap">
+                                {{ item.commit?.commit?.authorEmail?.split('@')[0] || 'Unknown' }}
+                            </td>
+                            <!-- Target Commits -->
+                            <td class="p-4 text-center">
+                                <!-- В плоском списке показываем release commits для этого конкретного MR -->
+                                <div v-if="item.task.releaseCommits" class="flex items-center justify-center space-x-1">
+                                    <template v-for="releaseCommit in Object.values(item.task.releaseCommits)" :key="releaseCommit?.mrNumber">
+                                        <button v-if="releaseCommit?.mrNumber === item.commit.mrNumber" @click="openLink(releaseCommit.url)"
+                                            class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            MR #{{ releaseCommit?.mrNumber }}
+                                        </button>
+                                    </template>
+                                </div>
+                            </td>
+                            <!-- Cherry-pick -->
+                            <td class="p-4 text-center">
+                                <button v-if="!item.commit.transferred"
+                                    :disabled="tasksStore.loadingButtons.has(item.commit.mrNumber)"
+                                    @click="$emit('cherry-pick-request', item.commit.mrNumber, item.task.key)"
+                                    class="relative flex justify-center items-center w-32 h-10 px-4 py-2 rounded text-white transition-all duration-300 ease-in-out"
+                                    :class="[
+                                        tasksStore.loadingButtons.has(item.commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600'
+                                    ]">
+                                    <span class="flex items-center justify-center w-full h-full">
+                                        {{ tasksStore.loadingButtons.has(item.commit.mrNumber) ? 'Processing' : 'Cherry-pick' }}
+                                    </span>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                    <!-- Обычный режим: группировка по задачам -->
+                    <template v-else>
+                        <tr v-for="task in localFilteredTasks" :key="task.key" class="border-b">
                         <!-- Select -->
                         <td class="p-4 text-center">
                             <ul class="list-none space-y-2">
@@ -194,6 +266,7 @@
                             </ul>
                         </td>
                     </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
@@ -239,61 +312,98 @@ export default {
                 this.$emit('update:selectedAuthors', val);
             }
         },
+        currentSortDirection() {
+            // Computed property для отслеживания изменений sortDirection.mrNumber
+            return this.sortDirection?.mrNumber || null;
+        },
+        isMrNumberSortActive() {
+            // Проверяем, включена ли сортировка по MR number
+            return this.currentSortDirection !== null;
+        },
+        flattenedMrList() {
+            // Создаем плоский список всех MR из всех задач
+            const mrList = [];
+            
+            let tasksToProcess = this.hideWithTargetCommits
+                ? this.filteredTasksWithoutTargetCommits.filter(task => {
+                    // Фильтруем задачи, у которых есть хотя бы один коммит с transferred === false
+                    if (!task.commits) return false;
+                    const commitsArray = this.filteredCommits(task.commits);
+                    return commitsArray.some(commit => !commit.transferred);
+                })
+                : [...this.filteredTasksWithoutTargetCommits];
+
+            // Фильтруем задачи по выбранным авторам
+            if (this.localSelectedAuthors.length > 0) {
+                tasksToProcess = tasksToProcess.filter(task => {
+                    if (!task.commits) return false;
+                    return Object.values(task.commits).some(commit =>
+                        this.localSelectedAuthors.includes(
+                            (commit?.commit?.authorEmail?.split('@')[0] || '')
+                        )
+                    );
+                });
+            }
+
+            // Разворачиваем все задачи в плоский список MR
+            tasksToProcess.forEach(task => {
+                if (!task.commits) return;
+                
+                // Преобразуем commits в массив, если это Map/Object
+                const commitsArray = this.filteredCommits(task.commits);
+                commitsArray.forEach(commit => {
+                    // Проверяем наличие mrNumber (может быть строкой или числом)
+                    const mrNum = commit?.mrNumber;
+                    if (mrNum !== null && mrNum !== undefined && mrNum !== '') {
+                        const mrNumberInt = typeof mrNum === 'number' ? mrNum : parseInt(mrNum);
+                        if (!isNaN(mrNumberInt) && mrNumberInt > 0) {
+                            mrList.push({
+                                commit: commit,
+                                task: task,
+                                mrNumber: mrNumberInt
+                            });
+                        }
+                    }
+                });
+            });
+
+            // Сортируем по номеру MR (flattenedMrList используется только когда сортировка включена)
+            const sortDirectionValue = this.currentSortDirection || 'asc';
+            mrList.sort((a, b) => {
+                return sortDirectionValue === 'asc' ? a.mrNumber - b.mrNumber : b.mrNumber - a.mrNumber;
+            });
+
+            return mrList;
+        },
         localFilteredTasks() {
-    let tasksToFilter = this.hideWithTargetCommits
-        ? this.filteredTasksWithoutTargetCommits.filter(task => 
-            !task.releaseCommits || task.releaseCommits.length === 0 // Assuming releaseCommits is an array from store
-        )
-        : [...this.filteredTasksWithoutTargetCommits]; // Create a shallow copy for sorting
+            // Если включена сортировка по MR number, возвращаем пустой список (будем использовать flattenedMrList)
+            if (this.isMrNumberSortActive) {
+                return [];
+            }
+            
+            let tasksToFilter = this.hideWithTargetCommits
+                ? this.filteredTasksWithoutTargetCommits.filter(task => {
+                    // Фильтруем задачи, у которых есть хотя бы один коммит с transferred === false
+                    if (!task.commits) return false;
+                    const commitsArray = this.filteredCommits(task.commits);
+                    return commitsArray.some(commit => !commit.transferred);
+                })
+                : [...this.filteredTasksWithoutTargetCommits];
 
-    // Дополнительно фильтруем задачи по выбранным авторам
-    if (this.localSelectedAuthors.length > 0) {
-        tasksToFilter = tasksToFilter.filter(task => {
-            if (!task.commits) return false;
-            return Object.values(task.commits).some(commit =>
-                this.localSelectedAuthors.includes(
-                    (commit?.commit?.authorEmail?.split('@')[0] || '')
-                )
-            );
-        });
-    }
+            // Дополнительно фильтруем задачи по выбранным авторам
+            if (this.localSelectedAuthors.length > 0) {
+                tasksToFilter = tasksToFilter.filter(task => {
+                    if (!task.commits) return false;
+                    return Object.values(task.commits).some(commit =>
+                        this.localSelectedAuthors.includes(
+                            (commit?.commit?.authorEmail?.split('@')[0] || '')
+                        )
+                    );
+                });
+            }
 
-    // Date sorting
-    tasksToFilter.sort((a, b) => {
-      const dateA = this.getTaskSortDate(a);
-      const dateB = this.getTaskSortDate(b);
-
-      const aHasCommitDate = dateA !== null;
-      const bHasCommitDate = dateB !== null;
-
-      // Prioritize tasks with commit dates
-      if (aHasCommitDate && !bHasCommitDate) return -1;
-      if (!aHasCommitDate && bHasCommitDate) return 1;
-      
-      if (!aHasCommitDate && !bHasCommitDate) {
-        // Both tasks have no commit dates, sort by original task.date (e.g., Jira date)
-        const fallbackDateA = a.date ? new Date(a.date) : null;
-        const fallbackDateB = b.date ? new Date(b.date) : null;
-
-        if (fallbackDateA instanceof Date && !isNaN(fallbackDateA) && !(fallbackDateB instanceof Date && !isNaN(fallbackDateB))) return -1;
-        if (!(fallbackDateA instanceof Date && !isNaN(fallbackDateA)) && fallbackDateB instanceof Date && !isNaN(fallbackDateB)) return 1;
-        if (!(fallbackDateA instanceof Date && !isNaN(fallbackDateA)) && !(fallbackDateB instanceof Date && !isNaN(fallbackDateB))) return a.key.localeCompare(b.key);
-
-        if (fallbackDateA.getTime() === fallbackDateB.getTime()) {
-            return a.key.localeCompare(b.key); // Secondary sort by key
-        }
-        return this.sortDirection.date === 'asc' ? fallbackDateA - fallbackDateB : fallbackDateB - fallbackDateA;
-      }
-
-      // Both tasks have commit dates
-      if (dateA.getTime() === dateB.getTime()) {
-          return a.key.localeCompare(b.key); // Secondary sort by key for stable order
-      }
-      return this.sortDirection.date === 'asc' ? dateA - dateB : dateB - dateA;
-    });
-
-    return tasksToFilter;
-},
+            return tasksToFilter;
+        },
         isCherryPickDisabled() {
             return (
                 this.tasksStore.isCherryPickListButtonDisabled ||
@@ -333,28 +443,22 @@ export default {
         }
     },
     methods: {
-        getTaskSortDate(task) {
+        getTaskMinMrNumber(task) {
             if (!task.commits || Object.keys(task.commits).length === 0) {
                 return null; 
             }
-            const commitDates = Object.values(task.commits)
-                .map(c => c.commit?.authoredDate ? new Date(c.commit.authoredDate) : null)
-                .filter(d => d instanceof Date && !isNaN(d.getTime())); // Ensure 'd' is a valid Date object
+            const mrNumbers = Object.values(task.commits)
+                .map(c => c.mrNumber ? parseInt(c.mrNumber) : null)
+                .filter(num => num !== null && !isNaN(num));
 
-            if (commitDates.length === 0) return null; // No valid commit dates found
+            if (mrNumbers.length === 0) return null; // No valid MR numbers found
 
-            if (this.sortDirection.date === 'asc') {
-                // Earliest commit date for ascending sort
-                return new Date(Math.min.apply(null, commitDates));
-            } else {
-                // Latest commit date for descending sort
-                return new Date(Math.max.apply(null, commitDates));
-            }
+            // Return minimum MR number for sorting
+            return Math.min.apply(null, mrNumbers);
         },
         getDisplayDateForTask(task) {
-            // Display the date used for sorting if available, otherwise fallback to task.date
-            const sortDate = this.getTaskSortDate(task);
-            return sortDate ? sortDate : (task.date && !isNaN(new Date(task.date).getTime()) ? new Date(task.date) : null);
+            // Display task.date if available
+            return task.date && !isNaN(new Date(task.date).getTime()) ? new Date(task.date) : null;
         },
         openLink(url) {
             window.open(url, '_blank');
