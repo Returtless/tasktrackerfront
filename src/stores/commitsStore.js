@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
+import api from '@/services/api';
 import { showNotification } from '@/services/notificationService';
 
 export const useTasksStore = defineStore('tasksStore', {
@@ -19,7 +19,7 @@ export const useTasksStore = defineStore('tasksStore', {
   actions: {
     async fetchSettings() {
       try {
-        const response = await axios.get('/api/settings');
+        const response = await api.get('/api/settings');
         return response.data;
       } catch (error) {
         console.error('Error fetching settings:', error);
@@ -28,20 +28,33 @@ export const useTasksStore = defineStore('tasksStore', {
     },
 
     async fetchPatches(projectKey = 'SPPDEV') {
+      if (!projectKey) {
+        this.patches = [];
+        return;
+      }
+      
       this.patchesLoading = true;
       try {
-        const response = await axios.get('/api/patches', {
+        const response = await api.get('/api/patches', {
           params: { projectKey }
         });
         this.patches = response.data || [];
+        // Если список пустой, это не ошибка - просто нет патчей для этого проекта
+        if (this.patches.length === 0) {
+          console.log(`No patches found for project ${projectKey}`);
+        }
       } catch (error) {
-        console.error('Error fetching patches:', error);
+        console.warn('Error fetching patches:', error);
         this.patches = [];
-        showNotification({
-          title: 'Error',
-          text: 'Failed to load patches from Jira',
-          type: 'error',
-        });
+        // Не показываем ошибку, если это просто отсутствие проекта в Jira
+        // Это нормальная ситуация для проектов, которые не синхронизированы с Jira
+        if (error.response?.status !== 400) {
+          showNotification({
+            title: 'Warning',
+            text: `No patches found for project ${projectKey}`,
+            type: 'warning',
+          });
+        }
       } finally {
         this.patchesLoading = false;
       }
@@ -52,12 +65,18 @@ export const useTasksStore = defineStore('tasksStore', {
       this.error = null;
     
       try {
-        const response = await axios.post('/api/commits', payload);
+        const response = await api.post('/api/commits', payload);
         const masterTasks = response.data.masterTasks;
         const releaseTasks = response.data.releaseTasks;
     
         const releaseTasksMap = new Map();
-        releaseTasks.forEach((task) => releaseTasksMap.set(task.key, task.commits));
+        releaseTasks.forEach((task) => {
+          // Преобразуем commits из Map в массив
+          const commitsArray = task.commits && typeof task.commits === 'object' && !Array.isArray(task.commits)
+            ? Object.values(task.commits)
+            : (Array.isArray(task.commits) ? task.commits : []);
+          releaseTasksMap.set(task.key, commitsArray);
+        });
     
         this.masterTasks = masterTasks.map((task) => ({
           ...task,
@@ -79,7 +98,7 @@ export const useTasksStore = defineStore('tasksStore', {
     async sendCherryPickRequest(payload) {
       try {
         this.loadingButtons.add(payload.mrNumber);
-        const response = await axios.post('/api/cherrypick', payload);
+        const response = await api.post('/api/cherrypick', payload);
     
         const taskInfo = response.data;
     
@@ -98,7 +117,15 @@ export const useTasksStore = defineStore('tasksStore', {
           const commitsToAdd = Array.isArray(taskInfo.commits)
             ? taskInfo.commits
             : Object.values(taskInfo.commits || {});
-    
+
+          // Убеждаемся, что releaseCommits существует и является массивом
+          // (может быть объектом Map, если данные пришли напрямую с бэкенда)
+          if (!task.releaseCommits) {
+            task.releaseCommits = [];
+          } else if (!Array.isArray(task.releaseCommits)) {
+            // Если это объект (Map), преобразуем в массив
+            task.releaseCommits = Object.values(task.releaseCommits);
+          }
           task.releaseCommits.push(...commitsToAdd);
 
           // Помечаем исходный коммит как перенесённый, чтобы скрыть кнопку Cherry-pick
@@ -142,7 +169,7 @@ export const useTasksStore = defineStore('tasksStore', {
       this.loadingListButton = true;
     
       try {
-        const response = await axios.post('/api/cherrypicklist', payload);
+        const response = await api.post('/api/cherrypicklist', payload);
     
         const taskInfos = response.data;
     
@@ -168,8 +195,12 @@ export const useTasksStore = defineStore('tasksStore', {
                 : Object.values(taskInfo.commits || {});
               
               // Добавляем releaseCommits (новый MR)
+              // Убеждаемся, что releaseCommits является массивом (может быть объектом Map)
               if (!task.releaseCommits) {
                 task.releaseCommits = [];
+              } else if (!Array.isArray(task.releaseCommits)) {
+                // Если это объект (Map), преобразуем в массив
+                task.releaseCommits = Object.values(task.releaseCommits);
               }
               task.releaseCommits.push(...commitsToAdd);
               

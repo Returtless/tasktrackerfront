@@ -4,21 +4,16 @@ import router from './router';
 import { createPinia } from 'pinia';
 import './assets/style.css'; 
 import Notifications from '@kyvg/vue3-notification';
-import { initNotificationService, showNotification } from './services/notificationService';
+import { initNotificationService } from './services/notificationService';
 
 const app = createApp(App);
+const pinia = createPinia();
 
 app.use(router);
-app.use(createPinia());
+app.use(pinia);
 app.use(Notifications);
 
 initNotificationService();
 
-// Test notification
-showNotification({
-  title: 'Test Notification',
-  text: 'This is a test notification.',
-  type: 'success'
-});
-
+// Mount app - router guard will handle authentication check
 app.mount('#app');
