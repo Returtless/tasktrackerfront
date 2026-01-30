@@ -3,11 +3,11 @@
     <div class="min-h-screen w-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
       <div class="w-full max-w-md p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         <h1 class="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">
-          {{ isFirstUser ? 'Create Admin Account' : 'Login' }}
+          {{ isFirstUser ? 'Create Admin Account' : (showRegister ? 'Sign Up' : 'Login') }}
         </h1>
 
         <!-- Login Form -->
-        <form v-if="!isFirstUser" @submit.prevent="handleLogin" class="space-y-6">
+        <form v-if="!isFirstUser && !showRegister" @submit.prevent="handleLogin" class="space-y-6">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Username
@@ -43,8 +43,8 @@
           </button>
         </form>
 
-        <!-- Register Form (First User) -->
-        <form v-else @submit.prevent="handleRegister" class="space-y-6">
+        <!-- Register Form (First User or Manual Registration) -->
+        <form v-if="isFirstUser || showRegister" @submit.prevent="handleRegister" class="space-y-6">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Username
@@ -101,9 +101,22 @@
             :disabled="authStore.isLoading || !passwordsMatch"
             class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {{ authStore.isLoading ? 'Creating account...' : 'Create Admin Account' }}
+            {{ authStore.isLoading ? 'Creating account...' : (isFirstUser ? 'Create Admin Account' : 'Sign Up') }}
           </button>
         </form>
+
+        <!-- Toggle between Login and Register -->
+        <div v-if="!isFirstUser" class="mt-6 text-center">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            {{ showRegister ? 'Already have an account?' : "Don't have an account?" }}
+            <button
+              @click="showRegister = !showRegister"
+              class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 font-medium ml-1"
+            >
+              {{ showRegister ? 'Login' : 'Sign up' }}
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -119,6 +132,7 @@ export default {
     const authStore = useAuthStore();
     const isDarkMode = ref(false);
     const isFirstUser = ref(false);
+    const showRegister = ref(false);
 
     const loginForm = ref({
       username: '',
@@ -160,6 +174,7 @@ export default {
       authStore,
       isDarkMode,
       isFirstUser,
+      showRegister,
       loginForm,
       registerForm,
       passwordsMatch,

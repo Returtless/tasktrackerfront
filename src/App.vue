@@ -1,6 +1,6 @@
 <template>
   <router-view></router-view>
-  <notifications></notifications>
+  <notifications position="bottom right" :max="5" :width="320"></notifications>
 </template>
 
 <script>

@@ -1,10 +1,10 @@
 <template>
-    <!-- Контейнер для таблицы, центрируем с container mx-auto -->
-    <div class="commits-table container mx-auto py-8 px-4">
+    <!-- Контейнер для таблицы -->
+    <div class="commits-table w-full max-w-[1200px] mx-auto py-8 px-4">
 
         <!-- Состояния загрузки/ошибки/пустых данных те же -->
         <div v-if="tasksStore.loading"
-            class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px] p-4 text-center">
+            class="w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center">
             <svg class="animate-spin h-6 w-6 text-blue-500 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none"
                 viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -12,16 +12,16 @@
             </svg>
         </div>
         <div v-else-if="tasksStore.error"
-            class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px] p-4 text-center text-red-500">
+            class="w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center text-red-500">
             {{ tasksStore.error }}
         </div>
         <div v-else-if="(isMrNumberSortActive && flattenedMrList.length === 0) || (!isMrNumberSortActive && localFilteredTasks.length === 0)"
-            class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px] p-4 text-center">
+            class="w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center">
             <p class="text-gray-600">Нет данных для отображения</p>
         </div>
 
         <!-- Сама таблица, если есть данные -->
-        <div v-else-if="(isMrNumberSortActive && flattenedMrList.length > 0) || (!isMrNumberSortActive && localFilteredTasks.length > 0)" class="mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg w-[1200px]">
+        <div v-else-if="(isMrNumberSortActive && flattenedMrList.length > 0) || (!isMrNumberSortActive && localFilteredTasks.length > 0)" class="w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg">
 
             <!-- Шапка таблицы (заголовок Commits Page, фильтры, Cherry-pick Selected) -->
             <div

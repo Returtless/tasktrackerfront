@@ -18,3 +18,31 @@
   .dark .toggle-button svg {
     fill: #fff;
   }
+
+/* Уведомления: позиционирование в правом нижнем углу */
+.vue-notification-group {
+  bottom: 16px !important;
+  right: 16px !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 30 !important;
+}
+
+/* Стили для уведомлений: больше высота, больше текст */
+.vue-notification {
+  min-height: 80px !important;
+  padding: 16px 20px !important;
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+}
+
+.vue-notification-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin-bottom: 8px !important;
+}
+
+.vue-notification-content {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
