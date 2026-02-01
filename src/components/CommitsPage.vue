@@ -15,6 +15,8 @@
             v-model:targetBranch="targetBranch" 
             v-model:patchNumber="patchNumber"
             v-model:forceRefresh="forceRefresh"
+            v-model:selection-mode="selectionMode"
+            v-model:mr-count="mrCount"
             :is-refresh-disabled="isRefreshDisabled" 
             :patches="tasksStore.patches" 
             :patches-loading="tasksStore.patchesLoading"
@@ -85,6 +87,8 @@ export default {
     const forceRefresh = ref(false); // Принудительное обновление без кеша БД
     const isSettingsLoading = ref(true);
     const isDarkMode = ref(false);
+    const selectionMode = ref('patch'); // 'patch' или 'recentMR'
+    const mrCount = ref(10); // 10, 25 или 50
 
     // Дополнительные состояния
     const selectedAuthors = ref([]);
@@ -143,19 +147,32 @@ export default {
     const refreshTable = async () => {
       try {
         tasksStore.loading = true;
-        if (forceRefresh.value) {
-          console.log('Sending request with patchNumber:', patchNumber.value, '(FORCE REFRESH mode)');
+        
+        if (selectionMode.value === 'recentMR') {
+          // Режим последних MR
+          await tasksStore.fetchRecentMRs(
+            selectedGitlabUrl.value,
+            selectedProjectId.value,
+            sourceBranch.value,
+            targetBranch.value,
+            mrCount.value
+          );
         } else {
-          console.log('Sending request with patchNumber:', patchNumber.value);
+          // Режим патча
+          if (forceRefresh.value) {
+            console.log('Sending request with patchNumber:', patchNumber.value, '(FORCE REFRESH mode)');
+          } else {
+            console.log('Sending request with patchNumber:', patchNumber.value);
+          }
+          await tasksStore.fetchCommits({
+            gitlabUrl: selectedGitlabUrl.value,
+            projectId: selectedProjectId.value,
+            sourceBranch: sourceBranch.value,
+            targetBranch: targetBranch.value,
+            patchNumber: patchNumber.value,
+            forceRefresh: forceRefresh.value, // Передаем флаг принудительного обновления
+          });
         }
-        await tasksStore.fetchCommits({
-          gitlabUrl: selectedGitlabUrl.value,
-          projectId: selectedProjectId.value,
-          sourceBranch: sourceBranch.value,
-          targetBranch: targetBranch.value,
-          patchNumber: patchNumber.value,
-          forceRefresh: forceRefresh.value, // Передаем флаг принудительного обновления
-        });
       } catch (error) {
         console.error('Error refreshing table:', error);
       } finally {
@@ -243,19 +260,32 @@ export default {
       }
     });
 
-    // Перезагружаем патчи при изменении проекта или веток
+    // Перезагружаем патчи при изменении проекта или веток (только в режиме patch)
     watch(selectedProjectKey, async (newProjectKey) => {
-      if (newProjectKey && selectedProjectId.value && !isSettingsLoading.value) {
+      if (newProjectKey && selectedProjectId.value && !isSettingsLoading.value && selectionMode.value === 'patch') {
         await tasksStore.fetchPatches(newProjectKey);
       }
     });
 
     // Также загружаем патчи при выборе веток (на случай, если проект уже был выбран)
     watch([sourceBranch, targetBranch], async ([newSourceBranch, newTargetBranch]) => {
-      if (newSourceBranch && newTargetBranch && selectedProjectKey.value && !isSettingsLoading.value) {
+      if (newSourceBranch && newTargetBranch && selectedProjectKey.value && !isSettingsLoading.value && selectionMode.value === 'patch') {
         // Загружаем патчи, если они еще не загружены
         if (tasksStore.patches.length === 0 && !tasksStore.patchesLoading) {
           await tasksStore.fetchPatches(selectedProjectKey.value);
+        }
+      }
+    });
+
+    // При изменении режима выбора
+    watch(selectionMode, (newMode) => {
+      if (newMode === 'recentMR') {
+        // Очищаем patchNumber при переключении на режим MR
+        patchNumber.value = '';
+      } else {
+        // При переключении на режим patch загружаем патчи
+        if (selectedProjectKey.value && !isSettingsLoading.value) {
+          tasksStore.fetchPatches(selectedProjectKey.value);
         }
       }
     });
@@ -291,6 +321,8 @@ export default {
       isRefreshDisabled,
       filteredTasksWithoutTargetCommits,
       showUserMenu,
+      selectionMode,
+      mrCount,
       goToSettings,
       handleLogout,
       refreshTable,

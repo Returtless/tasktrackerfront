@@ -47,9 +47,22 @@
           </div>
         </div>
 
-        <!-- Правая часть: Patch, Force Toggle, Refresh, Theme, User Menu -->
+        <!-- Правая часть: Selection Mode, Patch/MR, Force Toggle, Refresh, Theme, User Menu -->
         <div class="flex items-center gap-3 flex-shrink-0">
-          <div class="relative w-64">
+          <!-- Режим выбора: Патч или Последние MR -->
+          <div class="flex items-center gap-2 border rounded p-2 dark:bg-gray-700 dark:border-gray-600">
+            <label class="flex items-center gap-1 cursor-pointer text-sm">
+              <input type="radio" :value="'patch'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'patch')" class="w-4 h-4 text-blue-600" />
+              <span class="text-gray-700 dark:text-gray-300">Патч</span>
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer text-sm">
+              <input type="radio" :value="'recentMR'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'recentMR')" class="w-4 h-4 text-blue-600" />
+              <span class="text-gray-700 dark:text-gray-300">Последние MR</span>
+            </label>
+          </div>
+
+          <!-- Выбор патча (видно только в режиме patch) -->
+          <div v-if="localSelectionMode === 'patch'" class="relative w-64">
             <select v-model="localPatchNumber" 
               class="p-2 border rounded w-full dark:bg-gray-700 dark:text-white dark:border-gray-600 pr-8"
               :disabled="patchesLoading || !localSelectedProjectId">
@@ -67,6 +80,18 @@
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
               </svg>
             </div>
+          </div>
+
+          <!-- Выбор количества MR (видно только в режиме recentMR) -->
+          <div v-if="localSelectionMode === 'recentMR'" class="relative w-32">
+            <select v-model="localMrCount" 
+              class="p-2 border rounded w-full dark:bg-gray-700 dark:text-white dark:border-gray-600"
+              :disabled="!localSelectedProjectId"
+              @change="$emit('update:mr-count', parseInt($event.target.value))">
+              <option value="10">10 MR</option>
+              <option value="25">25 MR</option>
+              <option value="50">50 MR</option>
+            </select>
           </div>
 
           <div class="flex items-center gap-2">
@@ -331,9 +356,22 @@
           </select>
         </div>
 
-        <!-- Строка 3: Patch, Theme, User Menu -->
+        <!-- Строка 3: Selection Mode, Patch/MR, Theme, User Menu -->
         <div class="flex items-center gap-3">
-          <div class="relative flex-1">
+          <!-- Режим выбора: Патч или Последние MR -->
+          <div class="flex items-center gap-1 border rounded p-1 dark:bg-gray-700 dark:border-gray-600">
+            <label class="flex items-center gap-1 cursor-pointer text-xs">
+              <input type="radio" :value="'patch'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'patch')" class="w-3 h-3 text-blue-600" />
+              <span class="text-gray-700 dark:text-gray-300">Патч</span>
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer text-xs">
+              <input type="radio" :value="'recentMR'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'recentMR')" class="w-3 h-3 text-blue-600" />
+              <span class="text-gray-700 dark:text-gray-300">MR</span>
+            </label>
+          </div>
+
+          <!-- Выбор патча (видно только в режиме patch) -->
+          <div v-if="localSelectionMode === 'patch'" class="relative flex-1">
             <select v-model="localPatchNumber" 
               class="p-2 border rounded w-full dark:bg-gray-700 dark:text-white dark:border-gray-600 pr-8"
               :disabled="patchesLoading || !localSelectedProjectId">
@@ -351,6 +389,18 @@
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
               </svg>
             </div>
+          </div>
+
+          <!-- Выбор количества MR (видно только в режиме recentMR) -->
+          <div v-if="localSelectionMode === 'recentMR'" class="relative flex-1">
+            <select v-model="localMrCount" 
+              class="p-2 border rounded w-full dark:bg-gray-700 dark:text-white dark:border-gray-600"
+              :disabled="!localSelectedProjectId"
+              @change="$emit('update:mr-count', parseInt($event.target.value))">
+              <option value="10">10 MR</option>
+              <option value="25">25 MR</option>
+              <option value="50">50 MR</option>
+            </select>
           </div>
 
           <!-- Переключатель темы и ЛК -->
@@ -500,6 +550,14 @@ export default {
     authStore: {
       type: Object,
       default: null
+    },
+    selectionMode: {
+      type: String,
+      default: 'patch'
+    },
+    mrCount: {
+      type: Number,
+      default: 10
     }
   },
   computed: {
@@ -550,6 +608,22 @@ export default {
       },
       set(val) {
         this.$emit('update:forceRefresh', val);
+      }
+    },
+    localSelectionMode: {
+      get() {
+        return this.selectionMode;
+      },
+      set(val) {
+        this.$emit('update:selection-mode', val);
+      }
+    },
+    localMrCount: {
+      get() {
+        return this.mrCount;
+      },
+      set(val) {
+        this.$emit('update:mr-count', val);
       }
     },
 

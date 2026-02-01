@@ -59,6 +59,47 @@ export const useTasksStore = defineStore('tasksStore', {
         this.patchesLoading = false;
       }
     },
+
+    async fetchRecentMRs(gitlabUrl, projectId, sourceBranch, targetBranch, mrCount) {
+      this.loading = true;
+      this.error = null;
+      
+      try {
+        const response = await api.post('/api/recent-mrs', {
+          gitlabUrl,
+          projectId: parseInt(projectId),
+          sourceBranch,
+          targetBranch,
+          mrCount
+        });
+        
+        const masterTasks = response.data.masterTasks;
+        const releaseTasks = response.data.releaseTasks;
+    
+        const releaseTasksMap = new Map();
+        releaseTasks.forEach((task) => {
+          const commitsArray = task.commits && typeof task.commits === 'object' && !Array.isArray(task.commits)
+            ? Object.values(task.commits)
+            : (Array.isArray(task.commits) ? task.commits : []);
+          releaseTasksMap.set(task.key, commitsArray);
+        });
+    
+        this.masterTasks = masterTasks.map((task) => ({
+          ...task,
+          releaseCommits: releaseTasksMap.get(task.key) || [],
+        }));
+      } catch (error) {
+        const errorMessage = error.response?.data?.errorMessage || error.message || 'Unknown error';
+        this.error = `Error fetching recent MRs: ${errorMessage}`;
+        showNotification({
+          title: 'Error',
+          text: this.error,
+          type: 'error',
+        });
+      } finally {
+        this.loading = false;
+      }
+    },
     
     async fetchCommits(payload) {
       this.loading = true;

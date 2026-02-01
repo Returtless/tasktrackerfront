@@ -213,6 +213,41 @@ export const useSettingsStore = defineStore('settingsStore', {
         return false;
       }
     },
+
+    async loadSelectedProjectsAndBranches() {
+      try {
+        await this.loadUserSettings();
+        const selectionJson = this.userSettings['selected_projects_and_branches'];
+        if (selectionJson) {
+          return JSON.parse(selectionJson);
+        }
+        return null;
+      } catch (error) {
+        console.error('Error loading selected projects and branches:', error);
+        return null;
+      }
+    },
+
+    async saveSelectedProjectsAndBranches(selection) {
+      try {
+        const response = await api.put('/api/settings/user/projects-branches', { selection });
+        this.userSettings = response.data || {};
+        showNotification({
+          title: 'Success',
+          text: 'Projects and branches selection saved successfully',
+          type: 'success',
+        });
+        return true;
+      } catch (error) {
+        showNotification({
+          title: 'Error',
+          text: error.response?.data?.message || 'Failed to save selection',
+          type: 'error',
+        });
+        console.error('Error saving selected projects and branches:', error);
+        return false;
+      }
+    },
   },
 });
 
