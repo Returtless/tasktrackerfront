@@ -3,33 +3,33 @@
     <div class="min-h-screen w-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200">
       <div class="container mx-auto px-4 py-8">
         <div class="max-w-2xl mx-auto">
-          <h1 class="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Settings</h1>
+          <h1 class="text-3xl font-bold mb-8 text-gray-900 dark:text-white">{{ $t('pages.settings') }}</h1>
 
           <!-- GitLab Instances -->
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
             <div class="flex justify-between items-center mb-4">
-              <h2 class="text-xl font-semibold text-gray-900 dark:text-white">GitLab Instances</h2>
+              <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ $t('settings.gitlabInstances') }}</h2>
               <div class="flex gap-2">
                 <button
                   @click="syncGitlabProjects"
                   :disabled="settingsStore.isSyncing || settingsStore.isLoading"
                   class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Sync projects from GitLab"
+                  :title="$t('settings.syncProjects')"
                 >
-                  {{ settingsStore.isSyncing ? 'Syncing...' : '🔄 Sync Projects' }}
+                  {{ settingsStore.isSyncing ? $t('settings.syncing') : '🔄 ' + $t('settings.syncProjects') }}
                 </button>
                 <button
                   @click="showAddGitlabForm = true"
                   class="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                 >
-                  + Add GitLab Instance
+                  + {{ $t('settings.addGitlabInstance') }}
                 </button>
               </div>
             </div>
 
             <!-- Список GitLab инстансов -->
             <div v-if="settingsStore.gitlabInstances.length === 0" class="text-gray-500 dark:text-gray-400 text-sm py-4">
-              No GitLab instances configured. Click "Add GitLab Instance" to add one.
+              {{ $t('settings.noInstances') }}
             </div>
 
             <div v-else class="space-y-4">
@@ -42,10 +42,10 @@
                   <div class="flex-1">
                     <div class="font-semibold text-gray-900 dark:text-white mb-2">{{ instance.gitlabUrl }}</div>
                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                      Token: {{ instance.token }}
+                      {{ $t('settings.token') }}: {{ instance.token }}
                     </div>
                     <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      Created: {{ formatDate(instance.createdAt) }}
+                      {{ $t('settings.created') }}: {{ formatDate(instance.createdAt) }}
                     </div>
                   </div>
                   <div class="flex gap-2">
@@ -54,14 +54,14 @@
                       :disabled="settingsStore.isSyncing"
                       class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Edit
+                      {{ $t('common.edit') }}
                     </button>
                     <button
                       @click="deleteInstance(instance.instanceId)"
                       :disabled="settingsStore.isSyncing"
                       class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Delete
+                      {{ $t('common.delete') }}
                     </button>
                   </div>
                 </div>
@@ -70,7 +70,7 @@
                 <div v-else class="space-y-3">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      GitLab URL
+                      URL GitLab
                     </label>
                     <input
                       v-model="editInstanceForm.gitlabUrl"
@@ -81,13 +81,13 @@
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Token
+                      {{ $t('settings.token') }}
                     </label>
                     <input
                       v-model="editInstanceForm.token"
                       type="password"
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
-                      placeholder="Enter new token or leave empty to keep current"
+                      :placeholder="$t('settings.enterNewToken')"
                     />
                   </div>
                   <div class="flex gap-2">
@@ -96,14 +96,14 @@
                       :disabled="settingsStore.isSyncing"
                       class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Save
+                      {{ $t('common.save') }}
                     </button>
                     <button
                       @click="cancelEditInstance"
                       :disabled="settingsStore.isSyncing"
                       class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Cancel
+                      {{ $t('common.cancel') }}
                     </button>
                   </div>
                 </div>
@@ -112,11 +112,11 @@
 
             <!-- Форма добавления нового инстанса -->
             <div v-if="showAddGitlabForm" class="mt-4 border-t border-gray-300 dark:border-gray-600 pt-4">
-              <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Add New GitLab Instance</h3>
+              <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{{ $t('settings.addNewInstance') }}</h3>
               <div class="space-y-3">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    GitLab URL
+                    {{ $t('settings.gitlabUrl') }}
                   </label>
                   <input
                     v-model="newInstanceForm.gitlabUrl"
@@ -127,7 +127,7 @@
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Token
+                    {{ $t('settings.token') }}
                   </label>
                   <input
                     v-model="newInstanceForm.token"
@@ -136,7 +136,7 @@
                     placeholder="glpat-..."
                   />
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Create a personal access token in GitLab with "api" scope
+                    {{ $t('settings.createTokenHint') }}
                   </p>
                 </div>
                 <div class="flex gap-2">
@@ -145,14 +145,14 @@
                   :disabled="!newInstanceForm.gitlabUrl || !newInstanceForm.token || settingsStore.isSyncing"
                   class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  Add Instance
+                  {{ $t('settings.addInstance') }}
                 </button>
                 <button
                   @click="cancelAddInstance"
                   :disabled="settingsStore.isSyncing"
                   class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Cancel
+                  {{ $t('common.cancel') }}
                 </button>
                 </div>
               </div>
@@ -161,12 +161,12 @@
 
           <!-- App Settings -->
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Application Settings</h2>
+            <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{{ $t('settings.applicationSettings') }}</h2>
             
             <div class="space-y-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Jira URL
+                  {{ $t('settings.jiraUrl') }}
                 </label>
                 <input
                   v-model="appSettingsForm.jiraUrl"
@@ -178,19 +178,19 @@
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Jira Auth Token
+                  {{ $t('settings.jiraAuthToken') }}
                   <span v-if="hasJiraToken" class="ml-2 text-xs text-green-600 dark:text-green-400">
-                    (Token is saved)
+                    {{ $t('settings.tokenSaved') }}
                   </span>
                 </label>
                 <input
                   v-model="appSettingsForm.jiraAuth"
                   type="password"
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  :placeholder="hasJiraToken ? 'Enter new token to update (leave empty to keep current)' : 'Bearer YOUR_TOKEN'"
+                  :placeholder="hasJiraToken ? $t('settings.enterNewTokenToUpdate') : 'Bearer YOUR_TOKEN'"
                 />
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Format: Bearer YOUR_TOKEN or just YOUR_TOKEN. Leave empty to keep current token.
+                  {{ $t('settings.tokenFormat') }}
                 </p>
               </div>
             </div>
@@ -200,24 +200,24 @@
               :disabled="settingsStore.isLoading || settingsStore.isSyncing"
               class="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {{ settingsStore.isLoading ? 'Saving...' : 'Save Application Settings' }}
+              {{ settingsStore.isLoading ? $t('settings.saving') : $t('settings.saveApplicationSettings') }}
             </button>
           </div>
 
           <!-- User Settings -->
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">User Settings</h2>
+            <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{{ $t('settings.userSettings') }}</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Select the GitLab projects and branches you want to see in the toolbar. Only selected items will be displayed.
+              {{ $t('settings.selectProjectsBranches') }}
             </p>
             
             <div v-if="projectsBranchesLoading" class="text-center py-8">
               <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading projects and branches...</p>
+              <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ $t('settings.loadingProjectsBranches') }}</p>
             </div>
             
             <div v-else-if="allProjectsData.length === 0" class="text-sm text-gray-500 dark:text-gray-400 py-4">
-              No projects available. Please sync GitLab instances first.
+              {{ $t('settings.noProjectsAvailable') }}
             </div>
             
             <div v-else class="space-y-4">
@@ -226,7 +226,7 @@
                 <input
                   v-model="projectsSearchQuery"
                   type="text"
-                  placeholder="Search projects or branches..."
+                  :placeholder="$t('settings.searchProjectsBranches')"
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
@@ -315,20 +315,20 @@
                   @click="selectAllProjectsBranches"
                   class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
                 >
-                  Select All
+                  {{ $t('settings.selectAll') }}
                 </button>
                 <button
                   @click="deselectAllProjectsBranches"
                   class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
                 >
-                  Deselect All
+                  {{ $t('settings.deselectAll') }}
                 </button>
                 <button
                   @click="saveProjectsBranchesSelection"
                   :disabled="settingsStore.isLoading"
                   class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
                 >
-                  {{ settingsStore.isLoading ? 'Saving...' : 'Save Selection' }}
+                  {{ settingsStore.isLoading ? $t('settings.saving') : $t('settings.saveSelection') }}
                 </button>
               </div>
             </div>
@@ -341,7 +341,7 @@
               :disabled="settingsStore.isSyncing"
               class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Back to Main Page
+              {{ $t('settings.backToMainPage') }}
             </button>
           </div>
         </div>
@@ -356,6 +356,7 @@ import { useRouter } from 'vue-router';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTasksStore } from '@/stores/commitsStore';
 import { showNotification } from '@/services/notificationService';
+import i18n from '@/i18n';
 
 export default {
   name: 'SettingsPage',
@@ -500,8 +501,8 @@ export default {
           try {
             await settingsStore.loadGitlabInstances();
             showNotification({
-              title: 'Success',
-              text: 'Synchronization completed. Projects should now be available.',
+              title: i18n.t('notifications.success'),
+              text: i18n.t('notifications.syncCompleted'),
               type: 'success',
             });
           } catch (error) {
@@ -771,8 +772,8 @@ export default {
       const success = await settingsStore.saveSelectedProjectsAndBranches(selectedProjectsBranches.value);
       if (success) {
         showNotification({
-          title: 'Success',
-          text: 'Your selection has been saved. Please refresh the main page to see the changes.',
+          title: i18n.t('notifications.success'),
+          text: i18n.t('notifications.selectionSavedRefresh'),
           type: 'success',
         });
       }

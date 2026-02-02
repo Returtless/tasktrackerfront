@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import api from '@/services/api';
 import { showNotification } from '@/services/notificationService';
 import router from '@/router';
+import i18n from '@/i18n';
 
 export const useAuthStore = defineStore('authStore', {
   state: () => ({
@@ -48,24 +49,24 @@ export const useAuthStore = defineStore('authStore', {
           this.user = response.data.user;
           this.isAuthenticated = true;
           showNotification({
-            title: 'Success',
-            text: 'Login successful',
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.loginSuccessful'),
             type: 'success',
           });
           router.push('/');
           return true;
         } else {
           showNotification({
-            title: 'Error',
-            text: response.data.message || 'Login failed',
+            title: i18n.t('notifications.error'),
+            text: response.data.message || i18n.t('notifications.loginFailed'),
             type: 'error',
           });
           return false;
         }
       } catch (error) {
         showNotification({
-          title: 'Error',
-          text: error.response?.data?.message || 'Login failed',
+          title: i18n.t('notifications.error'),
+          text: error.response?.data?.message || i18n.t('notifications.loginFailed'),
           type: 'error',
         });
         return false;
@@ -79,24 +80,24 @@ export const useAuthStore = defineStore('authStore', {
           this.user = response.data.user;
           this.isAuthenticated = true;
           showNotification({
-            title: 'Success',
-            text: 'Registration successful',
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.registrationSuccessful'),
             type: 'success',
           });
           router.push('/');
           return true;
         } else {
           showNotification({
-            title: 'Error',
-            text: response.data.message || 'Registration failed',
+            title: i18n.t('notifications.error'),
+            text: response.data.message || i18n.t('notifications.registrationFailed'),
             type: 'error',
           });
           return false;
         }
       } catch (error) {
         showNotification({
-          title: 'Error',
-          text: error.response?.data?.message || 'Registration failed',
+          title: i18n.t('notifications.error'),
+          text: error.response?.data?.message || i18n.t('notifications.registrationFailed'),
           type: 'error',
         });
         return false;
@@ -110,8 +111,8 @@ export const useAuthStore = defineStore('authStore', {
         this.isAuthenticated = false;
         router.push('/login');
         showNotification({
-          title: 'Success',
-          text: 'Logged out successfully',
+          title: i18n.t('notifications.success'),
+          text: i18n.t('notifications.logoutSuccessful'),
           type: 'success',
         });
       } catch (error) {

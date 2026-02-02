@@ -14,7 +14,7 @@
         <!-- Левая часть: селекторы -->
         <div class="flex items-center gap-3 flex-1 min-w-0">
           <select v-model="localSelectedGitlabUrl" class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white dark:border-gray-600">
-            <option value="" disabled>Select GitLab URL</option>
+            <option value="" disabled>{{ $t('toolbar.selectGitlabUrl') }}</option>
             <option v-for="url in sortedGitlabUrls" :key="url.url" :value="url.url">
               {{ url.url }}
             </option>
@@ -22,7 +22,7 @@
 
           <select v-model="localSelectedProjectId" class="p-2 border rounded w-64 dark:bg-gray-700 dark:text-white dark:border-gray-600"
             :disabled="!localSelectedGitlabUrl">
-            <option value="" disabled>Select Project</option>
+            <option value="" disabled>{{ $t('toolbar.selectProject') }}</option>
             <option v-for="project in sortedSelectedGitlabUrlProjects" :key="project.id" :value="project.id">
               {{ project.name }}
             </option>
@@ -31,7 +31,7 @@
           <div class="flex items-center gap-2">
             <select v-model="localSourceBranch" class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white dark:border-gray-600"
               :disabled="!localSelectedProjectId">
-              <option value="" disabled>Source</option>
+              <option value="" disabled>{{ $t('toolbar.source') }}</option>
               <option v-for="branch in sortedSelectedProjectBranches" :key="branch" :value="branch">
                 {{ branch }}
               </option>
@@ -39,7 +39,7 @@
             <span class="text-gray-600 dark:text-gray-400">→</span>
             <select v-model="localTargetBranch" class="p-2 border rounded w-32 dark:bg-gray-700 dark:text-white dark:border-gray-600"
               :disabled="!localSelectedProjectId">
-              <option value="" disabled>Target</option>
+              <option value="" disabled>{{ $t('toolbar.target') }}</option>
               <option v-for="branch in sortedSelectedProjectBranches" :key="branch" :value="branch">
                 {{ branch }}
               </option>
@@ -59,7 +59,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
-              <span class="text-sm font-medium">Options</span>
+              <span class="text-sm font-medium">Настройки</span>
               <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showOptionsMenu }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
               </svg>
@@ -81,11 +81,11 @@
               >
                 <!-- Selection Mode -->
                 <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Selection Mode</label>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.selectionMode') }}</label>
                   <div class="flex items-center gap-4">
                     <label class="flex items-center gap-2 cursor-pointer">
                       <input type="radio" :value="'patch'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'patch')" class="w-4 h-4 text-blue-600" />
-                      <span class="text-sm text-gray-700 dark:text-gray-300">Patch</span>
+                      <span class="text-sm text-gray-700 dark:text-gray-300">{{ $t('toolbar.patch') }}</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                       <input type="radio" :value="'recentMR'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'recentMR')" class="w-4 h-4 text-blue-600" />
@@ -96,13 +96,13 @@
 
                 <!-- Patch Selector -->
                 <div v-if="localSelectionMode === 'patch'" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Patch</label>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.patch') }}</label>
                   <div class="relative">
                     <select v-model="localPatchNumber" 
                       class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       :disabled="patchesLoading || !localSelectedProjectId">
                       <option value="" disabled>
-                        {{ patchesLoading ? 'Загрузка...' : 'Выберите патч' }}
+                        {{ patchesLoading ? $t('common.loading') : $t('toolbar.selectPatch') }}
                       </option>
                       <option v-for="patch in patches" :key="patch.key || patch.id" :value="patch.key || patch.id">
                         {{ patch.summary || patch.name || patch.key || patch.id }}
@@ -120,7 +120,7 @@
 
                 <!-- MR Count Selector -->
                 <div v-if="localSelectionMode === 'recentMR'" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">MR Count</label>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.mrCount') }}</label>
                   <select v-model="localMrCount" 
                     class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     :disabled="!localSelectedProjectId"
@@ -135,9 +135,9 @@
                 <div class="px-4 py-2">
                   <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" v-model="localForceRefresh" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Force Refresh</span>
-                    <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" :title="localForceRefresh ? 'Принудительное обновление (игнорирует кеш БД)' : 'Обычное обновление (использует кеш БД)'">
-                      ({{ localForceRefresh ? 'ignores cache' : 'uses cache' }})
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ $t('toolbar.forceRefresh') }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" :title="localForceRefresh ? $t('toolbar.forceRefresh') + ' (' + $t('toolbar.ignoresCache') + ')' : $t('toolbar.refresh') + ' (' + $t('toolbar.usesCache') + ')'">
+                      ({{ localForceRefresh ? $t('toolbar.ignoresCache') : $t('toolbar.usesCache') }})
                     </span>
                   </label>
                 </div>
@@ -150,19 +150,19 @@
             @click="$emit('refresh-table')"
             class="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="isRefreshDisabled"
-            :title="localForceRefresh ? 'Force Refresh' : 'Refresh Table'"
+            :title="localForceRefresh ? $t('toolbar.forceRefresh') : $t('toolbar.refreshTable')"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            <span class="text-sm font-medium">Refresh</span>
+            <span class="text-sm font-medium">{{ $t('toolbar.refresh') }}</span>
           </button>
 
           <!-- Theme Toggle Button -->
           <button
             @click="$emit('update:is-dark-mode', !isDarkMode)"
             class="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-            title="Toggle dark mode"
+            :title="$t('toolbar.darkTheme')"
           >
             <svg v-if="!isDarkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
@@ -211,7 +211,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
-                    Настройки
+                    {{ $t('toolbar.settings') }}
                   </button>
                   <button
                     @click="$emit('handle-logout')"
@@ -220,7 +220,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                     </svg>
-                    Выйти
+                    {{ $t('toolbar.logout') }}
                   </button>
                 </div>
               </transition>
@@ -233,7 +233,7 @@
         <!-- Первая строка: GitLab URL, Project, Source → Target -->
         <div class="flex items-center gap-2 justify-between">
           <select v-model="localSelectedGitlabUrl" class="p-2 border rounded flex-1 min-w-0 dark:bg-gray-700 dark:text-white dark:border-gray-600 text-sm">
-            <option value="" disabled>Select GitLab URL</option>
+            <option value="" disabled>{{ $t('toolbar.selectGitlabUrl') }}</option>
             <option v-for="url in sortedGitlabUrls" :key="url.url" :value="url.url">
               {{ url.url }}
             </option>
@@ -241,7 +241,7 @@
 
           <select v-model="localSelectedProjectId" class="p-2 border rounded flex-1 min-w-0 dark:bg-gray-700 dark:text-white dark:border-gray-600 text-sm"
             :disabled="!localSelectedGitlabUrl">
-            <option value="" disabled>Select Project</option>
+            <option value="" disabled>{{ $t('toolbar.selectProject') }}</option>
             <option v-for="project in sortedSelectedGitlabUrlProjects" :key="project.id" :value="project.id">
               {{ project.name }}
             </option>
@@ -250,7 +250,7 @@
           <div class="flex items-center gap-1 flex-shrink-0">
             <select v-model="localSourceBranch" class="p-2 border rounded w-24 dark:bg-gray-700 dark:text-white dark:border-gray-600 text-sm"
               :disabled="!localSelectedProjectId">
-              <option value="" disabled>Source</option>
+              <option value="" disabled>{{ $t('toolbar.source') }}</option>
               <option v-for="branch in sortedSelectedProjectBranches" :key="branch" :value="branch">
                 {{ branch }}
               </option>
@@ -258,7 +258,7 @@
             <span class="text-gray-600 dark:text-gray-400 text-sm">→</span>
             <select v-model="localTargetBranch" class="p-2 border rounded w-24 dark:bg-gray-700 dark:text-white dark:border-gray-600 text-sm"
               :disabled="!localSelectedProjectId">
-              <option value="" disabled>Target</option>
+              <option value="" disabled>{{ $t('toolbar.target') }}</option>
               <option v-for="branch in sortedSelectedProjectBranches" :key="branch" :value="branch">
                 {{ branch }}
               </option>
@@ -297,11 +297,11 @@
               >
                 <!-- Selection Mode -->
                 <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Selection Mode</label>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.selectionMode') }}</label>
                   <div class="flex items-center gap-4">
                     <label class="flex items-center gap-2 cursor-pointer">
                       <input type="radio" :value="'patch'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'patch')" class="w-3 h-3 text-blue-600" />
-                      <span class="text-xs text-gray-700 dark:text-gray-300">Patch</span>
+                      <span class="text-xs text-gray-700 dark:text-gray-300">Патч</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                       <input type="radio" :value="'recentMR'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'recentMR')" class="w-3 h-3 text-blue-600" />
@@ -312,13 +312,13 @@
 
                 <!-- Patch Selector -->
                 <div v-if="localSelectionMode === 'patch'" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Patch</label>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.patch') }}</label>
                   <div class="relative">
                     <select v-model="localPatchNumber" 
                       class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       :disabled="patchesLoading || !localSelectedProjectId">
                       <option value="" disabled>
-                        {{ patchesLoading ? 'Загрузка...' : 'Выберите патч' }}
+                        {{ patchesLoading ? $t('common.loading') : $t('toolbar.selectPatch') }}
                       </option>
                       <option v-for="patch in patches" :key="patch.key || patch.id" :value="patch.key || patch.id">
                         {{ patch.summary || patch.name || patch.key || patch.id }}
@@ -336,7 +336,7 @@
 
                 <!-- MR Count Selector -->
                 <div v-if="localSelectionMode === 'recentMR'" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">MR Count</label>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.mrCount') }}</label>
                   <select v-model="localMrCount" 
                     class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     :disabled="!localSelectedProjectId"
@@ -351,7 +351,7 @@
                 <div class="px-4 py-2">
                   <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" v-model="localForceRefresh" class="w-3 h-3 text-blue-600 rounded focus:ring-blue-500" />
-                    <span class="text-xs text-gray-700 dark:text-gray-300">Force Refresh</span>
+                    <span class="text-xs text-gray-700 dark:text-gray-300">Принудительное обновление</span>
                   </label>
                 </div>
               </div>
@@ -374,7 +374,7 @@
           <button
             @click="$emit('update:is-dark-mode', !isDarkMode)"
             class="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-            title="Toggle dark mode"
+            :title="$t('toolbar.darkTheme')"
           >
             <svg v-if="!isDarkMode" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
@@ -423,7 +423,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
-                    Настройки
+                    {{ $t('toolbar.settings') }}
                   </button>
                   <button
                     @click="$emit('handle-logout')"
@@ -432,7 +432,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                     </svg>
-                    Выйти
+                    {{ $t('toolbar.logout') }}
                   </button>
                 </div>
               </transition>
@@ -445,14 +445,14 @@
         <!-- Строка 1: GitLab URL и Project -->
         <div class="flex flex-col sm:flex-row gap-3">
           <select v-model="localSelectedGitlabUrl" class="p-2 border rounded flex-1 dark:bg-gray-700 dark:text-white dark:border-gray-600">
-            <option value="" disabled>Select GitLab URL</option>
+            <option value="" disabled>{{ $t('toolbar.selectGitlabUrl') }}</option>
             <option v-for="url in sortedGitlabUrls" :key="url.url" :value="url.url">
               {{ url.url }}
             </option>
           </select>
           <select v-model="localSelectedProjectId" class="p-2 border rounded flex-1 dark:bg-gray-700 dark:text-white dark:border-gray-600"
             :disabled="!localSelectedGitlabUrl">
-            <option value="" disabled>Select Project</option>
+            <option value="" disabled>{{ $t('toolbar.selectProject') }}</option>
             <option v-for="project in sortedSelectedGitlabUrlProjects" :key="project.id" :value="project.id">
               {{ project.name }}
             </option>
@@ -491,7 +491,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
-                <span class="text-sm font-medium">Options</span>
+                <span class="text-sm font-medium">Настройки</span>
               </div>
               <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showOptionsMenu }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -514,11 +514,11 @@
               >
                 <!-- Selection Mode -->
                 <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Selection Mode</label>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.selectionMode') }}</label>
                   <div class="flex items-center gap-4">
                     <label class="flex items-center gap-2 cursor-pointer">
                       <input type="radio" :value="'patch'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'patch')" class="w-3 h-3 text-blue-600" />
-                      <span class="text-sm text-gray-700 dark:text-gray-300">Patch</span>
+                      <span class="text-sm text-gray-700 dark:text-gray-300">{{ $t('toolbar.patch') }}</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                       <input type="radio" :value="'recentMR'" v-model="localSelectionMode" @change="$emit('update:selection-mode', 'recentMR')" class="w-3 h-3 text-blue-600" />
@@ -529,13 +529,13 @@
 
                 <!-- Patch Selector -->
                 <div v-if="localSelectionMode === 'patch'" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Patch</label>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.patch') }}</label>
                   <div class="relative">
                     <select v-model="localPatchNumber" 
                       class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       :disabled="patchesLoading || !localSelectedProjectId">
                       <option value="" disabled>
-                        {{ patchesLoading ? 'Загрузка...' : 'Выберите патч' }}
+                        {{ patchesLoading ? $t('common.loading') : $t('toolbar.selectPatch') }}
                       </option>
                       <option v-for="patch in patches" :key="patch.key || patch.id" :value="patch.key || patch.id">
                         {{ patch.summary || patch.name || patch.key || patch.id }}
@@ -553,7 +553,7 @@
 
                 <!-- MR Count Selector -->
                 <div v-if="localSelectionMode === 'recentMR'" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">MR Count</label>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.mrCount') }}</label>
                   <select v-model="localMrCount" 
                     class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     :disabled="!localSelectedProjectId"
@@ -568,7 +568,7 @@
                 <div class="px-4 py-2">
                   <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" v-model="localForceRefresh" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Force Refresh</span>
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Принудительное обновление</span>
                   </label>
                 </div>
               </div>
@@ -590,7 +590,7 @@
           <button
             @click="$emit('update:is-dark-mode', !isDarkMode)"
             class="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
-            title="Toggle dark mode"
+            :title="$t('toolbar.darkTheme')"
           >
             <svg v-if="!isDarkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
@@ -639,7 +639,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
-                    Настройки
+                    {{ $t('toolbar.settings') }}
                   </button>
                   <button
                     @click="$emit('handle-logout')"
@@ -648,7 +648,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                     </svg>
-                    Выйти
+                    {{ $t('toolbar.logout') }}
                   </button>
                 </div>
               </transition>
@@ -660,12 +660,30 @@
 </template>
 
 <script>
+import { getLanguage, setLanguage } from '@/i18n';
+
 export default {
   name: 'AppToolbar',
   data() {
     return {
-      showOptionsMenu: false
+      showOptionsMenu: false,
+      currentLanguage: getLanguage()
     };
+  },
+  methods: {
+    changeLanguage(lang) {
+      if (setLanguage(lang)) {
+        this.currentLanguage = lang;
+        // Перезагружаем страницу для применения изменений
+        window.location.reload();
+      }
+    },
+    handleClickOutside(event) {
+      // Закрываем меню Options при клике вне компонента
+      if (this.showOptionsMenu && !this.$el.contains(event.target)) {
+        this.showOptionsMenu = false;
+      }
+    }
   },
   mounted() {
     // Закрываем меню при клике вне его
@@ -673,14 +691,6 @@ export default {
   },
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside);
-  },
-  methods: {
-    handleClickOutside(event) {
-      // Закрываем меню Options при клике вне компонента
-      if (this.showOptionsMenu && !this.$el.contains(event.target)) {
-        this.showOptionsMenu = false;
-      }
-    }
   },
   props: {
     isSettingsLoading: {

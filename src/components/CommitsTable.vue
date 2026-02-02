@@ -17,7 +17,7 @@
         </div>
         <div v-else-if="(isMrNumberSortActive && flattenedMrList.length === 0) || (!isMrNumberSortActive && localFilteredTasks.length === 0)"
             class="w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center">
-            <p class="text-gray-600">Нет данных для отображения</p>
+            <p class="text-gray-600">{{ $t('commitsTable.noData') }}</p>
         </div>
 
         <!-- Сама таблица, если есть данные -->
@@ -25,50 +25,50 @@
 
             <!-- Шапка таблицы (заголовок Commits Page, фильтры, Cherry-pick Selected) -->
             <div
-                class="sticky top-[75px] z-20 bg-blue-500 dark:bg-gray-700 text-white p-4 rounded-t-lg relative min-h-[150px]">
+                class="sticky top-[75px] z-20 bg-blue-500 dark:bg-gray-700 text-white p-2 sm:p-4 rounded-t-lg relative min-h-[150px]">
                 <!-- Заголовок -->
-                <h1 class="text-center text-xl font-bold">Commits Page</h1>
+                <h1 class="text-center text-lg sm:text-xl font-bold">{{ $t('pages.commitsPage') }}</h1>
 
                 <!-- Верхняя панель с фильтрами и кнопками -->
-                <div class="flex items-center justify-between mt-2">
+                <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2 sm:gap-4 mt-2">
                     <!-- Левая группа: multiselect и кнопка сортировки -->
-                    <div class="flex items-center space-x-4">
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 flex-1 min-w-0">
                         <Multiselect v-model="localSelectedAuthors" :options="authorOptions" :multiple="true"
-                            :show-labels="false" placeholder="Filter by Author" class="w-64" />
+                            :show-labels="false" :placeholder="$t('commitsTable.filterByAuthor')" class="w-full sm:w-48 lg:w-64" />
                         <button @click="$emit('toggle-mr-number-sort')"
-                            class="sort-mr-number bg-gray-300 p-2 rounded hover:bg-gray-400 whitespace-nowrap text-center">
-                            Sort by MR number{{ currentSortDirection ? ` (${currentSortDirection})` : ' (off)' }}
+                            class="sort-mr-number bg-gray-300 p-2 rounded hover:bg-gray-400 whitespace-nowrap text-center text-sm">
+                            {{ $t('commitsTable.sortByMR') }}{{ currentSortDirection ? ` (${currentSortDirection})` : ` (${$t('commitsTable.sortOff')})` }}
                         </button>
                     </div>
 
                     <!-- Средняя группа: кнопки All / Not Cherry-picked -->
                     <div
-                        class="inline-flex w-[300px] border border-gray-400 dark:border-gray-600 rounded-lg overflow-hidden shadow-md">
+                        class="inline-flex w-full sm:w-auto sm:min-w-[200px] lg:w-[300px] border border-gray-400 dark:border-gray-600 rounded-lg overflow-hidden shadow-md">
                         <button @click="hideWithTargetCommits = false"
-                            class="flex-1 px-4 py-2 text-sm font-medium flex items-center justify-center transition-all duration-300 whitespace-nowrap"
+                            class="flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium flex items-center justify-center transition-all duration-300 whitespace-nowrap"
                             :class="hideWithTargetCommits
                                 ? 'bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-600'
                                 : 'bg-blue-600 text-white hover:bg-blue-700'">
-                            All
+                            {{ $t('commitsTable.all') }}
                         </button>
                         <button @click="hideWithTargetCommits = true"
-                            class="flex-1 px-4 py-2 text-sm font-medium flex items-center justify-center transition-all duration-300 whitespace-nowrap"
+                            class="flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium flex items-center justify-center transition-all duration-300 whitespace-nowrap"
                             :class="hideWithTargetCommits
                                 ? 'bg-red-500 text-white hover:bg-red-600'
                                 : 'bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-600'">
-                            Not cherry-picked
+                            {{ $t('commitsTable.notCherryPicked') }}
                         </button>
                     </div>
 
                     <!-- Правая группа: Cherry-pick Selected -->
                     <button :disabled="isCherryPickDisabled" :class="[
-                        'cherry-pick flex items-center justify-center px-4 py-2 rounded focus:outline-none focus:ring-2',
+                        'cherry-pick flex items-center justify-center px-2 sm:px-4 py-2 rounded focus:outline-none focus:ring-2 text-xs sm:text-sm whitespace-nowrap',
                         isCherryPickDisabled
                             ? 'bg-green-500 opacity-50 cursor-not-allowed'
                             : 'bg-green-500 hover:bg-green-600 text-white'
                     ]" @click="$emit('cherry-pick-list')">
-                        <span v-if="tasksStore.loadingListButton">Processing...</span>
-                        <span v-else>Cherry-pick Selected</span>
+                        <span v-if="tasksStore.loadingListButton">{{ $t('common.processing') }}</span>
+                        <span v-else>{{ $t('commitsTable.cherryPickSelected') }}</span>
                     </button>
                 </div>
 
@@ -87,18 +87,174 @@
                 </transition>
             </div>
 
-            <!-- Таблица с зафиксированным thead -->
+            <!-- Карточный вид для мобильных устройств (< 640px) -->
+            <div class="sm:hidden space-y-3 p-3">
+                <!-- Режим сортировки по MR number: плоский список -->
+                <template v-if="isMrNumberSortActive">
+                    <div v-for="item in flattenedMrList" :key="`card-${item.task.key}-${item.commit.mrNumber}`" 
+                        class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                        <!-- Заголовок: Issue Key + Improvement Status + Checkbox -->
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <input v-if="!item.commit.transferred" type="checkbox"
+                                    :checked="tasksStore.selectedCommits?.has(item.commit?.mrNumber)"
+                                    @change="item.commit?.mrNumber && $emit('toggle-commit-selection', item.commit.mrNumber)"
+                                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                                <button @click="openLink(`https://job-jira.otr.ru/browse/${item.task.key}`)"
+                                    class="bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 text-xs font-medium">
+                                    {{ item.task.key }}
+                                </button>
+                            </div>
+                            <span v-if="getStatusIcon(item.task.status)" class="text-xl" :title="(item.task.status || '') + (item.task.improvementName ? ' - ' + item.task.improvementName : '')">
+                                {{ getStatusIcon(item.task.status) }}
+                            </span>
+                        </div>
+                        <!-- Source Commits -->
+                        <div class="mb-3">
+                            <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">{{ $t('commitsTable.sourceCommits') }}</div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button v-if="item.commit?.mrNumber" @click="openLink(item.commit.url)" 
+                                    :class="item.commit.transferred
+                                        ? 'bg-green-500 text-white px-2 py-1 rounded text-xs font-medium'
+                                        : 'bg-red-500 text-white px-2 py-1 rounded text-xs font-medium'">
+                                    MR {{ item.commit?.mrNumber }}
+                                </button>
+                                <button v-if="item.commit?.commit?.webUrl" @click="openLink(item.commit.commit.webUrl)"
+                                    class="bg-purple-500 text-white w-6 h-6 rounded flex items-center justify-center text-xs hover:bg-purple-600">
+                                    🔗
+                                </button>
+                                <button v-if="!item.commit.transferred"
+                                    :disabled="tasksStore.loadingButtons.has(item.commit.mrNumber)"
+                                    @click="$emit('cherry-pick-request', item.commit.mrNumber, item.task.key)"
+                                    :title="tasksStore.loadingButtons.has(item.commit.mrNumber) ? $t('common.processing') : $t('commitsTable.cherryPick')"
+                                    class="w-8 h-8 rounded text-white flex items-center justify-center flex-shrink-0"
+                                    :class="[
+                                        tasksStore.loadingButtons.has(item.commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600'
+                                    ]">
+                                    <span class="text-lg">{{ tasksStore.loadingButtons.has(item.commit.mrNumber) ? '⏳' : '→' }}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Target Commits -->
+                        <div class="mb-3" v-if="item.task.releaseCommits && Object.values(item.task.releaseCommits).some(rc => rc?.mrNumber === item.commit.mrNumber)">
+                            <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">{{ $t('commitsTable.targetCommits') }}</div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <template v-for="releaseCommit in Object.values(item.task.releaseCommits)" :key="releaseCommit?.mrNumber">
+                                    <button v-if="releaseCommit?.mrNumber === item.commit.mrNumber" @click="openLink(releaseCommit.url)"
+                                        class="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-600">
+                                        MR {{ releaseCommit?.mrNumber }}
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                        <!-- Author + Date -->
+                        <div class="flex items-center justify-between text-xs pt-2 border-t border-gray-200 dark:border-gray-600">
+                            <span class="text-gray-600 dark:text-gray-400">
+                                👤 {{ item.commit?.commit?.authorEmail?.split('@')[0] || $t('common.unknown') }}
+                            </span>
+                            <span class="text-gray-500 dark:text-gray-400">
+                                📅 {{ getDisplayDateForTask(item.task) ? formatDateCompact(getDisplayDateForTask(item.task)) : $t('common.notAvailable') }}
+                            </span>
+                        </div>
+                    </div>
+                </template>
+                <!-- Обычный режим: группировка по задачам -->
+                <template v-else>
+                    <div v-for="task in localFilteredTasks" :key="`card-${task.key}`" 
+                        class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                        <!-- Заголовок: Issue Key + Improvement Status + Checkbox -->
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <input v-if="task.commits && filteredCommits(task.commits).some(c => !c.transferred)" 
+                                    type="checkbox"
+                                    :checked="task.commits && filteredCommits(task.commits).every(c => c.transferred || tasksStore.selectedCommits?.has(c?.mrNumber))"
+                                    @change="task.commits && $emit('toggle-task-selection', filteredCommits(task.commits).filter(c => !c.transferred).map(c => c.mrNumber))"
+                                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                                <button @click="openLink(`https://job-jira.otr.ru/browse/${task.key}`)"
+                                    class="bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 text-xs font-medium">
+                                    {{ task.key }}
+                                </button>
+                            </div>
+                            <span v-if="getStatusIcon(task.status)" class="text-xl" :title="(task.status || '') + (task.improvementName ? ' - ' + task.improvementName : '')">
+                                {{ getStatusIcon(task.status) }}
+                            </span>
+                        </div>
+                        <!-- Source Commits -->
+                        <div class="mb-3" v-if="task.commits && filteredCommits(task.commits).length > 0">
+                            <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">{{ $t('commitsTable.sourceCommits') }}</div>
+                            <div class="space-y-2">
+                                <template v-for="(commit, idx) in filteredCommits(task.commits)" :key="commit?.mrNumber || idx">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <input v-if="!commit.transferred" type="checkbox"
+                                            :checked="tasksStore.selectedCommits?.has(commit?.mrNumber)"
+                                            @change="commit?.mrNumber && $emit('toggle-commit-selection', commit.mrNumber)"
+                                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                                        <button v-if="commit?.mrNumber" @click="openLink(commit.url)" 
+                                            :class="commit.transferred
+                                                ? 'bg-green-500 text-white px-2 py-1 rounded text-xs font-medium'
+                                                : 'bg-red-500 text-white px-2 py-1 rounded text-xs font-medium'">
+                                            MR {{ commit?.mrNumber }}
+                                        </button>
+                                        <button v-if="commit?.commit?.webUrl" @click="openLink(commit.commit.webUrl)"
+                                            class="bg-purple-500 text-white w-6 h-6 rounded flex items-center justify-center text-xs hover:bg-purple-600">
+                                            🔗
+                                        </button>
+                                        <button v-if="!commit.transferred"
+                                            :disabled="tasksStore.loadingButtons.has(commit.mrNumber)"
+                                            @click="$emit('cherry-pick-request', commit.mrNumber, task.key)"
+                                            :title="tasksStore.loadingButtons.has(commit.mrNumber) ? $t('common.processing') : $t('commitsTable.cherryPick')"
+                                            class="w-8 h-8 rounded text-white flex items-center justify-center flex-shrink-0"
+                                            :class="[
+                                                tasksStore.loadingButtons.has(commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600'
+                                            ]">
+                                            <span class="text-lg">{{ tasksStore.loadingButtons.has(commit.mrNumber) ? '⏳' : '→' }}</span>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <!-- Target Commits -->
+                        <div class="mb-3" v-if="task.releaseCommits && Object.values(task.releaseCommits).length > 0">
+                            <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">{{ $t('commitsTable.targetCommits') }}</div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <template v-for="(commit, idx) in Object.values(task.releaseCommits)" :key="commit?.mrNumber || idx">
+                                    <button v-if="commit?.mrNumber" @click="openLink(commit.url)"
+                                        class="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-600">
+                                        MR {{ commit?.mrNumber }}
+                                    </button>
+                                    <button v-if="commit?.commit?.webUrl" @click="openLink(commit.commit.webUrl)"
+                                        class="bg-purple-500 text-white w-6 h-6 rounded flex items-center justify-center text-xs hover:bg-purple-600">
+                                        🔗
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                        <!-- Author + Date -->
+                        <div class="flex items-center justify-between text-xs pt-2 border-t border-gray-200 dark:border-gray-600" v-if="task.commits && filteredCommits(task.commits).length > 0">
+                            <span class="text-gray-600 dark:text-gray-400">
+                                👤 {{ filteredCommits(task.commits)[0]?.commit?.authorEmail?.split('@')[0] || 'Неизвестно' }}
+                            </span>
+                            <span class="text-gray-500 dark:text-gray-400">
+                                📅 {{ getDisplayDateForTask(task) ? formatDateCompact(getDisplayDateForTask(task)) : 'Н/Д' }}
+                            </span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Таблица с зафиксированным thead (скрыта на мобильных) -->
+            <div class="hidden sm:block overflow-x-auto">
             <table class="table-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 w-full">
-                <thead class="sticky top-[225px] z-30 bg-white dark:bg-gray-700">
+                <thead class="bg-white dark:bg-gray-700">
                     <tr>
-                        <th class="border-b p-4 text-center w-1/20">Select</th>
-                        <th class="border-b p-4 text-center w-3/20">Issue Key</th>
-                        <th class="border-b p-4 text-center w-3/20">Improvement Status</th>
-                        <th class="border-b p-4 text-center w-1/10">Date</th>
-                        <th class="border-b p-4 text-center w-3/20">Source Commits</th>
-                        <th class="border-b p-4 text-center w-1/10">Author</th>
-                        <th class="border-b p-4 text-center w-3/20">Target Commits</th>
-                        <th class="border-b p-4 text-center w-3/20">Cherry-pick</th>
+                        <th class="border-b p-1 sm:p-1.5 lg:p-3 text-center w-1/20 text-xs sm:text-sm lg:text-base"></th>
+                        <th class="border-b p-1 sm:p-1.5 lg:p-3 text-center w-3/20 text-xs sm:text-sm lg:text-base">{{ $t('commitsTable.taskJira') }}</th>
+                        <th class="border-b p-1 sm:p-1.5 lg:p-3 text-center w-3/20 text-xs sm:text-sm lg:text-base">{{ $t('commitsTable.improvementStatus') }}</th>
+                        <th class="border-b p-1 sm:p-1.5 lg:p-3 text-center w-1/10 text-xs sm:text-sm lg:text-base hidden lg:table-cell">{{ $t('commitsTable.date') }}</th>
+                        <th class="border-b p-1 sm:p-1.5 lg:p-3 text-center w-3/20 text-xs sm:text-sm lg:text-base">{{ $t('commitsTable.sourceMR') }}</th>
+                        <th class="border-b p-1 sm:p-1.5 lg:p-3 text-center w-1/10 text-xs sm:text-sm lg:text-base hidden lg:table-cell">{{ $t('commitsTable.author') }}</th>
+                        <th class="border-b p-1 sm:p-1.5 lg:p-3 text-center w-3/20 text-xs sm:text-sm lg:text-base">{{ $t('commitsTable.targetMR') }}</th>
+                        <th class="border-b p-1 sm:p-1.5 lg:p-3 text-center w-3/20 text-xs sm:text-sm lg:text-base"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -106,67 +262,72 @@
                     <template v-if="isMrNumberSortActive">
                         <tr v-for="item in flattenedMrList" :key="`${item.task.key}-${item.commit.mrNumber}`" class="border-b">
                             <!-- Select -->
-                            <td class="p-4 text-center">
+                            <td class="p-1 sm:p-1.5 lg:p-3 text-center">
                                 <input v-if="!item.commit.transferred" type="checkbox"
                                     :checked="tasksStore.selectedCommits?.has(item.commit?.mrNumber)"
                                     @change="item.commit?.mrNumber && $emit('toggle-commit-selection', item.commit.mrNumber)" />
                             </td>
                             <!-- Issue Key -->
-                            <td class="p-4 text-center">
+                            <td class="p-1 sm:p-1.5 lg:p-3 text-center">
                                 <button @click="openLink(`https://job-jira.otr.ru/browse/${item.task.key}`)"
-                                    class="bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 whitespace-nowrap truncate">
+                                    class="bg-orange-500 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 whitespace-nowrap truncate text-xs sm:text-sm">
                                     {{ item.task.key }}
                                 </button>
                             </td>
                             <!-- Improvement Status -->
-                            <td class="p-4 text-center align-middle" :title="item.task.improvementName">
-                                {{ item.task.status }}
+                            <td class="p-1 sm:p-1.5 lg:p-3 text-center align-middle" :title="(item.task.status || '') + (item.task.improvementName ? ' - ' + item.task.improvementName : '')">
+                                <span v-if="getStatusIcon(item.task.status)" class="text-base sm:text-lg lg:text-xl inline-block">{{ getStatusIcon(item.task.status) }}</span>
                             </td>
                             <!-- Date -->
-                            <td class="p-4 text-center whitespace-nowrap">
-                                {{ getDisplayDateForTask(item.task) ? formatDate(getDisplayDateForTask(item.task)) : 'N/A' }}
+                            <td class="p-1 sm:p-1.5 lg:p-3 text-center whitespace-nowrap text-xs sm:text-sm lg:text-base">
+                                <template v-if="getDisplayDateForTask(item.task)">
+                                    <span class="lg:hidden">{{ formatDateCompact(getDisplayDateForTask(item.task)) }}</span>
+                                    <span class="hidden lg:inline">{{ formatDateFull(getDisplayDateForTask(item.task)) }}</span>
+                                </template>
+                                <span v-else>{{ $t('common.notAvailable') }}</span>
                             </td>
                             <!-- Source Commits -->
-                            <td class="p-4 text-center">
-                                <div class="flex items-center justify-center space-x-1">
+                            <td class="p-1 sm:p-1.5 lg:p-3 text-center">
+                                <div class="flex items-center justify-center gap-0.5 sm:gap-1">
                                     <button v-if="item.commit?.mrNumber" @click="openLink(item.commit.url)" :class="item.commit.transferred
-                                        ? 'bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600'
-                                        : 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600'">
-                                        MR #{{ item.commit?.mrNumber }}
+                                        ? 'bg-green-500 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded hover:bg-green-600 text-xs sm:text-sm'
+                                        : 'bg-red-500 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded hover:bg-red-600 text-xs sm:text-sm'">
+                                        {{ item.commit?.mrNumber }}
                                     </button>
                                     <button v-if="item.commit?.commit?.webUrl" @click="openLink(item.commit.commit.webUrl)"
-                                        class="bg-purple-500 text-white w-6 h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center">
+                                        class="bg-purple-500 text-white w-5 h-5 sm:w-6 sm:h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center">
                                         🔗
                                     </button>
                                 </div>
                             </td>
                             <!-- Author -->
-                            <td class="p-4 text-center align-middle whitespace-nowrap">
-                                {{ item.commit?.commit?.authorEmail?.split('@')[0] || 'Unknown' }}
+                            <td class="p-1 sm:p-1.5 lg:p-3 text-center align-middle whitespace-nowrap text-xs sm:text-sm lg:text-base hidden lg:table-cell">
+                                {{ item.commit?.commit?.authorEmail?.split('@')[0] || $t('common.unknown') }}
                             </td>
                             <!-- Target Commits -->
-                            <td class="p-4 text-center">
+                            <td class="p-1 sm:p-1.5 lg:p-3 text-center">
                                 <!-- В плоском списке показываем release commits для этого конкретного MR -->
-                                <div v-if="item.task.releaseCommits" class="flex items-center justify-center space-x-1">
+                                <div v-if="item.task.releaseCommits" class="flex items-center justify-center gap-0.5 sm:gap-1">
                                     <template v-for="releaseCommit in Object.values(item.task.releaseCommits)" :key="releaseCommit?.mrNumber">
                                         <button v-if="releaseCommit?.mrNumber === item.commit.mrNumber" @click="openLink(releaseCommit.url)"
-                                            class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                            MR #{{ releaseCommit?.mrNumber }}
+                                            class="bg-blue-500 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm">
+                                            {{ releaseCommit?.mrNumber }}
                                         </button>
                                     </template>
                                 </div>
                             </td>
                             <!-- Cherry-pick -->
-                            <td class="p-4 text-center">
+                            <td class="p-1 sm:p-1.5 lg:p-3 text-center">
                                 <button v-if="!item.commit.transferred"
                                     :disabled="tasksStore.loadingButtons.has(item.commit.mrNumber)"
                                     @click="$emit('cherry-pick-request', item.commit.mrNumber, item.task.key)"
-                                    class="relative flex justify-center items-center w-32 h-10 px-4 py-2 rounded text-white transition-all duration-300 ease-in-out"
+                                    :title="tasksStore.loadingButtons.has(item.commit.mrNumber) ? $t('common.processing') : $t('commitsTable.cherryPick')"
+                                    class="relative flex justify-center items-center w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded text-white transition-all duration-300 ease-in-out"
                                     :class="[
                                         tasksStore.loadingButtons.has(item.commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600'
                                     ]">
-                                    <span class="flex items-center justify-center w-full h-full">
-                                        {{ tasksStore.loadingButtons.has(item.commit.mrNumber) ? 'Processing' : 'Cherry-pick' }}
+                                    <span class="text-base sm:text-lg lg:text-xl">
+                                        {{ tasksStore.loadingButtons.has(item.commit.mrNumber) ? '⏳' : '→' }}
                                     </span>
                                 </button>
                             </td>
@@ -176,8 +337,8 @@
                     <template v-else>
                         <tr v-for="task in localFilteredTasks" :key="task.key" class="border-b">
                         <!-- Select -->
-                        <td class="p-4 text-center">
-                            <ul class="list-none space-y-2">
+                        <td class="p-1 sm:p-1.5 lg:p-3 text-center">
+                            <ul class="list-none space-y-1 sm:space-y-1.5">
                                 <li v-for="(commit, index) in (task.commits ? filteredCommits(task.commits) : [])"
                                     :key="commit?.mrNumber || index">
                                     <!-- Чекбокс отображаем ТОЛЬКО если transferred === false -->
@@ -188,57 +349,61 @@
                             </ul>
                         </td>
                         <!-- Issue Key -->
-                        <td class="p-4 text-center">
+                        <td class="p-1 sm:p-1.5 lg:p-3 text-center">
                             <button @click="openLink(`https://job-jira.otr.ru/browse/${task.key}`)"
-                                class="bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 whitespace-nowrap truncate">
+                                class="bg-orange-500 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 whitespace-nowrap truncate text-xs sm:text-sm">
                                 {{ task.key }}
                             </button>
                         </td>
                         <!-- Improvement Status -->
-                        <td class="p-4 text-center align-middle" :title="task.improvementName">
-                            {{ task.status }}
+                        <td class="p-1 sm:p-1.5 lg:p-3 text-center align-middle" :title="(task.status || '') + (task.improvementName ? ' - ' + task.improvementName : '')">
+                            <span v-if="getStatusIcon(task.status)" class="text-base sm:text-lg lg:text-xl inline-block">{{ getStatusIcon(task.status) }}</span>
                         </td>
                         <!-- Date -->
-                        <td class="p-4 text-center whitespace-nowrap">
-                            {{ getDisplayDateForTask(task) ? formatDate(getDisplayDateForTask(task)) : 'N/A' }}
+                        <td class="p-1 sm:p-1.5 lg:p-3 text-center whitespace-nowrap text-xs sm:text-sm lg:text-base">
+                            <template v-if="getDisplayDateForTask(task)">
+                                <span class="lg:hidden">{{ formatDateCompact(getDisplayDateForTask(task)) }}</span>
+                                <span class="hidden lg:inline">{{ formatDateFull(getDisplayDateForTask(task)) }}</span>
+                            </template>
+                            <span v-else>N/A</span>
                         </td>
                         <!-- Source Commits -->
-                        <td class="p-4 text-center">
-                            <ul class="list-none space-y-2">
+                        <td class="p-1 sm:p-1.5 lg:p-3 text-center">
+                            <ul class="list-none space-y-1 sm:space-y-1.5">
                                 <li v-for="(commit, idx) in (task.commits ? filteredCommits(task.commits) : [])"
-                                    :key="commit?.mrNumber || idx" class="flex items-center justify-center space-x-1">
+                                    :key="commit?.mrNumber || idx" class="flex items-center justify-center gap-0.5 sm:gap-1">
                                     <button v-if="commit?.mrNumber" @click="openLink(commit.url)" :class="commit.transferred
-                                        ? 'bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600'
-                                        : 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600'">
-                                        MR #{{ commit?.mrNumber }}
+                                        ? 'bg-green-500 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded hover:bg-green-600 text-xs sm:text-sm'
+                                        : 'bg-red-500 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded hover:bg-red-600 text-xs sm:text-sm'">
+                                        {{ commit?.mrNumber }}
                                     </button>
                                     <button v-if="commit?.commit?.webUrl" @click="openLink(commit.commit.webUrl)"
-                                        class="bg-purple-500 text-white w-6 h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center">
+                                        class="bg-purple-500 text-white w-5 h-5 sm:w-6 sm:h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center">
                                         🔗
                                     </button>
                                 </li>
                             </ul>
                         </td>
                         <!-- Author -->
-                        <td class="p-4 text-center align-middle">
-                            <ul class="list-none space-y-2">
+                        <td class="p-1 sm:p-1.5 lg:p-3 text-center align-middle text-xs sm:text-sm lg:text-base hidden lg:table-cell">
+                            <ul class="list-none space-y-1 sm:space-y-1.5">
                                 <li v-for="(commit, idx) in (task.commits ? filteredCommits(task.commits) : [])"
                                     :key="commit?.mrNumber || idx" class="whitespace-nowrap">
-                                    {{ commit?.commit?.authorEmail?.split('@')[0] || 'Unknown' }}
+                                    {{ commit?.commit?.authorEmail?.split('@')[0] || 'Неизвестно' }}
                                 </li>
                             </ul>
                         </td>
                         <!-- Target Commits -->
-                        <td class="p-4 text-center">
-                            <ul class="list-none space-y-2">
+                        <td class="p-1 sm:p-1.5 lg:p-3 text-center">
+                            <ul class="list-none space-y-1 sm:space-y-1.5">
                                 <li v-for="(commit, idx) in (task.releaseCommits ? Object.values(task.releaseCommits) : [])"
-                                    :key="commit?.mrNumber || idx" class="flex items-center justify-center space-x-1">
+                                    :key="commit?.mrNumber || idx" class="flex items-center justify-center gap-0.5 sm:gap-1">
                                     <button v-if="commit?.mrNumber" @click="openLink(commit.url)"
-                                        class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        MR #{{ commit?.mrNumber }}
+                                        class="bg-blue-500 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm">
+                                        {{ commit?.mrNumber }}
                                     </button>
                                     <button v-if="commit?.commit?.webUrl" @click="openLink(commit.commit.webUrl)"
-                                        class="bg-purple-500 text-white w-6 h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center"
+                                        class="bg-purple-500 text-white w-5 h-5 sm:w-6 sm:h-6 rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center"
                                         title="Open commit web URL">
                                         🔗
                                     </button>
@@ -246,20 +411,20 @@
                             </ul>
                         </td>
                         <!-- Cherry-pick -->
-                        <td class="p-4 text-center">
-                            <ul class="list-none space-y-2">
+                        <td class="p-1 sm:p-1.5 lg:p-3 text-center">
+                            <ul class="list-none space-y-1 sm:space-y-1.5">
                                 <li v-for="(commit, idx) in (task.commits ? filteredCommits(task.commits) : [])"
                                     :key="commit?.mrNumber || idx" class="relative">
                                     <button v-if="!commit.transferred"
                                         :disabled="tasksStore.loadingButtons.has(commit.mrNumber)"
                                         @click="$emit('cherry-pick-request', commit.mrNumber, task.key)"
-                                        class="relative flex justify-center items-center w-32 h-10 px-4 py-2 rounded text-white transition-all duration-300 ease-in-out"
+                                        :title="tasksStore.loadingButtons.has(commit.mrNumber) ? $t('common.processing') : $t('commitsTable.cherryPick')"
+                                        class="relative flex justify-center items-center w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded text-white transition-all duration-300 ease-in-out"
                                         :class="[
                                             tasksStore.loadingButtons.has(commit.mrNumber) ? 'bg-red-500' : 'bg-green-500 hover:bg-green-600'
                                         ]">
-                                        <span class="flex items-center justify-center w-full h-full">
-                                            {{ tasksStore.loadingButtons.has(commit.mrNumber) ? 'Processing' :
-                                            'Cherry-pick' }}
+                                        <span class="text-base sm:text-lg lg:text-xl">
+                                            {{ tasksStore.loadingButtons.has(commit.mrNumber) ? '⏳' : '→' }}
                                         </span>
                                     </button>
                                 </li>
@@ -269,6 +434,7 @@
                     </template>
                 </tbody>
             </table>
+        </div>
         </div>
     </div>
 </template>
@@ -437,7 +603,7 @@ export default {
                 }
             }
             if (results.length === 0) {
-                return 'Processing cherry-pick...';
+                return this.$t('commitsTable.processingCherryPick');
             }
             return results.join('; ');
         }
@@ -468,6 +634,50 @@ export default {
                 day: '2-digit', month: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit'
             }).replace(',', '');
+        },
+        formatDateCompact(dateStr) {
+            if (!dateStr) return 'Н/Д';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return 'Н/Д';
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${day}.${month}`;
+        },
+        formatDateFull(dateStr) {
+            if (!dateStr) return 'Н/Д';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return 'Н/Д';
+            return date.toLocaleString('ru-RU', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            }).replace(',', '');
+        },
+        getStatusIcon(status) {
+            // Если статус пуст, не показываем иконку
+            if (!status || status.trim() === '') {
+                return '';
+            }
+            const statusLower = status.toLowerCase().trim();
+            
+            // Закрыто
+            if (statusLower === 'закрыто' || statusLower.includes('закрыт')) {
+                return '🔒';
+            }
+            // Исправление
+            if (statusLower === 'исправление' || statusLower.includes('исправлен')) {
+                return '🔧';
+            }
+            // Тестирование
+            if (statusLower === 'тестирование' || statusLower.includes('тестирован')) {
+                return '🧪';
+            }
+            // В разработке
+            if (statusLower === 'в разработке' || statusLower.includes('разработк')) {
+                return '💻';
+            }
+            
+            // Для статуса не из списка - показываем вопросительный знак
+            return '❓';
         },
         filteredCommits(commits) {
             if (!commits) return [];
@@ -542,5 +752,14 @@ export default {
 thead.sticky {
     position: sticky;
     z-index: 10;
+}
+
+/* Компактные строки таблицы */
+tbody tr {
+    min-height: auto;
+}
+
+td, th {
+    vertical-align: middle;
 }
 </style>

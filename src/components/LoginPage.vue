@@ -3,34 +3,34 @@
     <div class="min-h-screen w-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
       <div class="w-full max-w-md p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         <h1 class="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">
-          {{ isFirstUser ? 'Create Admin Account' : (showRegister ? 'Sign Up' : 'Login') }}
+          {{ isFirstUser ? $t('auth.createAdminAccount') : (showRegister ? $t('pages.signUp') : $t('pages.login')) }}
         </h1>
 
         <!-- Login Form -->
         <form v-if="!isFirstUser && !showRegister" @submit.prevent="handleLogin" class="space-y-6">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Username
+              {{ $t('auth.username') }}
             </label>
             <input
               v-model="loginForm.username"
               type="text"
               required
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="Enter username"
+              :placeholder="$t('auth.enterUsername')"
             />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Password
+              {{ $t('auth.password') }}
             </label>
             <input
               v-model="loginForm.password"
               type="password"
               required
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="Enter password"
+              :placeholder="$t('auth.enterPassword')"
             />
           </div>
 
@@ -39,7 +39,7 @@
             :disabled="authStore.isLoading"
             class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {{ authStore.isLoading ? 'Logging in...' : 'Login' }}
+            {{ authStore.isLoading ? $t('auth.loggingIn') : $t('auth.login') }}
           </button>
         </form>
 
@@ -47,52 +47,52 @@
         <form v-if="isFirstUser || showRegister" @submit.prevent="handleRegister" class="space-y-6">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Username
+              {{ $t('auth.username') }}
             </label>
             <input
               v-model="registerForm.username"
               type="text"
               required
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="Enter username"
+              :placeholder="$t('auth.enterUsername')"
             />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Email (optional)
+              {{ $t('auth.emailOptional') }}
             </label>
             <input
               v-model="registerForm.email"
               type="email"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="Enter email"
+              :placeholder="$t('auth.enterEmail')"
             />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Password
+              {{ $t('auth.password') }}
             </label>
             <input
               v-model="registerForm.password"
               type="password"
               required
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="Enter password"
+              :placeholder="$t('auth.enterPassword')"
             />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Confirm Password
+              {{ $t('auth.confirmPassword') }}
             </label>
             <input
               v-model="registerForm.confirmPassword"
               type="password"
               required
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="Confirm password"
+              :placeholder="$t('auth.confirmPasswordPlaceholder')"
             />
           </div>
 
@@ -101,19 +101,19 @@
             :disabled="authStore.isLoading || !passwordsMatch"
             class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {{ authStore.isLoading ? 'Creating account...' : (isFirstUser ? 'Create Admin Account' : 'Sign Up') }}
+            {{ authStore.isLoading ? $t('auth.creatingAccount') : (isFirstUser ? $t('auth.createAdminAccount') : $t('auth.signUp')) }}
           </button>
         </form>
 
         <!-- Toggle between Login and Register -->
         <div v-if="!isFirstUser" class="mt-6 text-center">
           <p class="text-sm text-gray-600 dark:text-gray-400">
-            {{ showRegister ? 'Already have an account?' : "Don't have an account?" }}
+            {{ showRegister ? $t('auth.alreadyHaveAccount') : $t('auth.noAccount') }}
             <button
               @click="showRegister = !showRegister"
               class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 font-medium ml-1"
             >
-              {{ showRegister ? 'Login' : 'Sign up' }}
+              {{ showRegister ? $t('auth.login') : $t('auth.signUpLink') }}
             </button>
           </p>
         </div>

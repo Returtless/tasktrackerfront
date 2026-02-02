@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import api from '@/services/api';
 import { showNotification } from '@/services/notificationService';
+import i18n from '@/i18n';
 
 export const useTasksStore = defineStore('tasksStore', {
   state: () => ({
@@ -50,8 +51,8 @@ export const useTasksStore = defineStore('tasksStore', {
         // Это нормальная ситуация для проектов, которые не синхронизированы с Jira
         if (error.response?.status !== 400) {
           showNotification({
-            title: 'Warning',
-            text: `No patches found for project ${projectKey}`,
+            title: i18n.t('notifications.warning'),
+            text: i18n.t('notifications.noPatchesFound', { projectKey }),
             type: 'warning',
           });
         }
@@ -89,10 +90,10 @@ export const useTasksStore = defineStore('tasksStore', {
           releaseCommits: releaseTasksMap.get(task.key) || [],
         }));
       } catch (error) {
-        const errorMessage = error.response?.data?.errorMessage || error.message || 'Unknown error';
-        this.error = `Error fetching recent MRs: ${errorMessage}`;
+        const errorMessage = error.response?.data?.errorMessage || error.message || 'Неизвестная ошибка';
+        this.error = `Ошибка получения последних MR: ${errorMessage}`;
         showNotification({
-          title: 'Error',
+          title: i18n.t('notifications.error'),
           text: this.error,
           type: 'error',
         });
@@ -124,10 +125,10 @@ export const useTasksStore = defineStore('tasksStore', {
           releaseCommits: releaseTasksMap.get(task.key) || [],
         }));
       } catch (error) {
-        const errorMessage = error.response?.data?.errorMessage || error.message || 'Unknown error';
-        this.error = `Error fetching commits: ${errorMessage}`;
+        const errorMessage = error.response?.data?.errorMessage || error.message || 'Неизвестная ошибка';
+        this.error = `Ошибка получения коммитов: ${errorMessage}`;
         showNotification({
-          title: 'Error',
+          title: i18n.t('notifications.error'),
           text: this.error,
           type: 'error',
         });
@@ -145,8 +146,8 @@ export const useTasksStore = defineStore('tasksStore', {
     
         if (taskInfo.key === 'Error') {
           showNotification({
-            title: 'Error',
-            text: taskInfo.errorMessage || 'An unknown error occurred.',
+            title: i18n.t('notifications.error'),
+            text: taskInfo.errorMessage || i18n.t('notifications.unknownError'),
             type: 'error',
           });
           return;
@@ -179,16 +180,16 @@ export const useTasksStore = defineStore('tasksStore', {
           }
     
           showNotification({
-            title: 'Success',
-            text: `Cherry-pick request completed for MR #${payload.mrNumber}.`,
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.cherryPickCompleted', { mrNumber: payload.mrNumber }),
             type: 'success',
           });
         }
       } catch (error) {
-        const errorMessage = error.response?.data?.errorMessage || error.message || 'Unknown error';
+        const errorMessage = error.response?.data?.errorMessage || error.message || 'Неизвестная ошибка';
         showNotification({
           title: 'Error',
-          text: `Error sending cherry-pick request: ${errorMessage}`,
+          text: `Ошибка отправки запроса на перенос: ${errorMessage}`,
           type: 'error',
         });
         console.error('Error sending cherry-pick request:', error);
@@ -200,8 +201,8 @@ export const useTasksStore = defineStore('tasksStore', {
     async sendCherryPickList(payload) {
       if (!payload.mrNumbers || payload.mrNumbers.length === 0) {
         showNotification({
-          title: 'Warning',
-          text: 'No commits selected.',
+          title: i18n.t('notifications.warning'),
+          text: i18n.t('notifications.noCommitsSelected'),
           type: 'warning',
         });
         return;
@@ -217,11 +218,11 @@ export const useTasksStore = defineStore('tasksStore', {
         const errorTasks = taskInfos.filter((task) => task.key === 'Error');
         if (errorTasks.length > 0) {
           errorTasks.forEach((errorTask) => {
-            showNotification({
-              title: 'Error',
-              text: errorTask.errorMessage || 'An unknown error occurred.',
-              type: 'error',
-            });
+              showNotification({
+                title: i18n.t('notifications.error'),
+                text: errorTask.errorMessage || i18n.t('notifications.unknownError'),
+                type: 'error',
+              });
           });
         } else {
           // Обновляем состояние задач: добавляем releaseCommits и помечаем выбранные коммиты как transferred
@@ -260,16 +261,16 @@ export const useTasksStore = defineStore('tasksStore', {
           this.selectedCommits.clear();
           
           showNotification({
-            title: 'Success',
-            text: `Cherry-pick request sent successfully for ${taskInfos.length} tasks.`,
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.cherryPickListSent', { count: taskInfos.length }),
             type: 'success',
           });
         }
       } catch (error) {
-        const errorMessage = error.response?.data?.errorMessage || error.message || 'Unknown error';
+        const errorMessage = error.response?.data?.errorMessage || error.message || 'Неизвестная ошибка';
         showNotification({
           title: 'Error',
-          text: `Error sending cherry-pick list request: ${errorMessage}`,
+          text: `Ошибка отправки запроса на перенос списка: ${errorMessage}`,
           type: 'error',
         });
         console.error('Error sending cherry-pick list request:', error);

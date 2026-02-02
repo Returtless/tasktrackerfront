@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import api from '@/services/api';
 import { showNotification } from '@/services/notificationService';
+import i18n from '@/i18n';
 
 export const useSettingsStore = defineStore('settingsStore', {
   state: () => ({
@@ -41,8 +42,8 @@ export const useSettingsStore = defineStore('settingsStore', {
     async updateAppSettings(settings) {
       if (this.isSyncing) {
         showNotification({
-          title: 'Warning',
-          text: 'Please wait for synchronization to complete',
+          title: i18n.t('notifications.warning'),
+          text: i18n.t('notifications.waitForSync'),
           type: 'warning',
         });
         return false;
@@ -52,18 +53,18 @@ export const useSettingsStore = defineStore('settingsStore', {
       try {
         const response = await api.put('/api/settings/app', { settings });
         this.appSettings = response.data || {};
-        showNotification({
-          title: 'Success',
-          text: 'Settings saved successfully',
-          type: 'success',
-        });
+          showNotification({
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.settingsSaved'),
+            type: 'success',
+          });
         return true;
       } catch (error) {
-        showNotification({
-          title: 'Error',
-          text: error.response?.data?.message || 'Failed to save settings',
-          type: 'error',
-        });
+          showNotification({
+            title: i18n.t('notifications.error'),
+            text: error.response?.data?.message || i18n.t('notifications.failedToSaveSettings'),
+            type: 'error',
+          });
         return false;
       } finally {
         this.isLoading = false;
@@ -74,18 +75,18 @@ export const useSettingsStore = defineStore('settingsStore', {
       try {
         const response = await api.put('/api/settings/user', { settings });
         this.userSettings = response.data || {};
-        showNotification({
-          title: 'Success',
-          text: 'Settings saved successfully',
-          type: 'success',
-        });
+          showNotification({
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.settingsSaved'),
+            type: 'success',
+          });
         return true;
       } catch (error) {
-        showNotification({
-          title: 'Error',
-          text: error.response?.data?.message || 'Failed to save settings',
-          type: 'error',
-        });
+          showNotification({
+            title: i18n.t('notifications.error'),
+            text: error.response?.data?.message || i18n.t('notifications.failedToSaveSettings'),
+            type: 'error',
+          });
         return false;
       }
     },
@@ -107,19 +108,19 @@ export const useSettingsStore = defineStore('settingsStore', {
       try {
         const response = await api.post('/api/settings/gitlab-instances', instance);
         await this.loadGitlabInstances();
-        showNotification({
-          title: 'Success',
-          text: 'GitLab instance created successfully',
-          type: 'success',
-        });
+          showNotification({
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.gitlabInstanceCreated'),
+            type: 'success',
+          });
         return response.data;
       } catch (error) {
         const errorMessage = error.response?.data?.error || 
                            error.response?.data?.message || 
                            error.message || 
-                           'Failed to create GitLab instance';
+                           'Не удалось создать экземпляр GitLab';
         showNotification({
-          title: 'Error',
+          title: i18n.t('notifications.error'),
           text: errorMessage,
           type: 'error',
         });
@@ -132,19 +133,19 @@ export const useSettingsStore = defineStore('settingsStore', {
       try {
         const response = await api.put(`/api/settings/gitlab-instances/${id}`, instance);
         await this.loadGitlabInstances();
-        showNotification({
-          title: 'Success',
-          text: 'GitLab instance updated successfully',
-          type: 'success',
-        });
+          showNotification({
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.gitlabInstanceUpdated'),
+            type: 'success',
+          });
         return response.data;
       } catch (error) {
         const errorMessage = error.response?.data?.error || 
                            error.response?.data?.message || 
                            error.message || 
-                           'Failed to update GitLab instance';
+                           'Не удалось обновить экземпляр GitLab';
         showNotification({
-          title: 'Error',
+          title: i18n.t('notifications.error'),
           text: errorMessage,
           type: 'error',
         });
@@ -157,19 +158,19 @@ export const useSettingsStore = defineStore('settingsStore', {
       try {
         await api.delete(`/api/settings/gitlab-instances/${id}`);
         await this.loadGitlabInstances();
-        showNotification({
-          title: 'Success',
-          text: 'GitLab instance deleted successfully',
-          type: 'success',
-        });
+          showNotification({
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.gitlabInstanceDeleted'),
+            type: 'success',
+          });
         return true;
       } catch (error) {
         const errorMessage = error.response?.data?.error || 
                            error.response?.data?.message || 
                            error.message || 
-                           'Failed to delete GitLab instance';
+                           'Не удалось удалить экземпляр GitLab';
         showNotification({
-          title: 'Error',
+          title: i18n.t('notifications.error'),
           text: errorMessage,
           type: 'error',
         });
@@ -186,11 +187,11 @@ export const useSettingsStore = defineStore('settingsStore', {
       this.isSyncing = true;
       try {
         await api.post('/api/settings/gitlab-instances/sync');
-        showNotification({
-          title: 'Success',
-          text: 'GitLab projects synchronization started. Please wait...',
-          type: 'success',
-        });
+          showNotification({
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.syncStarted'),
+            type: 'success',
+          });
         // Ждем завершения синхронизации (она выполняется на бэкенде)
         // Синхронизация может занять время, поэтому ждем дольше
         setTimeout(async () => {
@@ -203,9 +204,9 @@ export const useSettingsStore = defineStore('settingsStore', {
         const errorMessage = error.response?.data?.error || 
                            error.response?.data?.message || 
                            error.message || 
-                           'Failed to sync GitLab instances';
+                           'Не удалось синхронизировать экземпляры GitLab';
         showNotification({
-          title: 'Error',
+          title: i18n.t('notifications.error'),
           text: errorMessage,
           type: 'error',
         });
@@ -232,18 +233,18 @@ export const useSettingsStore = defineStore('settingsStore', {
       try {
         const response = await api.put('/api/settings/user/projects-branches', { selection });
         this.userSettings = response.data || {};
-        showNotification({
-          title: 'Success',
-          text: 'Projects and branches selection saved successfully',
-          type: 'success',
-        });
+          showNotification({
+            title: i18n.t('notifications.success'),
+            text: i18n.t('notifications.selectionSaved'),
+            type: 'success',
+          });
         return true;
       } catch (error) {
-        showNotification({
-          title: 'Error',
-          text: error.response?.data?.message || 'Failed to save selection',
-          type: 'error',
-        });
+          showNotification({
+            title: i18n.t('notifications.error'),
+            text: error.response?.data?.message || i18n.t('notifications.failedToSaveSelection'),
+            type: 'error',
+          });
         console.error('Error saving selected projects and branches:', error);
         return false;
       }
