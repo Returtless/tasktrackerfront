@@ -52,6 +52,8 @@ import { useTasksStore } from '@/stores/commitsStore';
 import { useAuthStore } from '@/stores/authStore';
 import AppToolbar from './AppToolbar.vue';
 import CommitsTable from './CommitsTable.vue';
+import { DEFAULT_PROJECT_KEY, DEFAULT_SOURCE_BRANCH, DEFAULT_TARGET_BRANCH } from '@/utils/constants';
+import { extractProjectKey } from '@/utils/projectUtils';
 
 export default {
   name: 'CommitsPage',
@@ -109,36 +111,19 @@ export default {
       return tasksStore.masterTasks;
     });
 
-    // Функция для извлечения ключа проекта из имени проекта
-    const extractProjectKey = (projectName) => {
-      if (!projectName) return 'SPPDEV';
-      // Если имя содержит дефис, берем часть до дефиса
-      let projectKey = projectName.includes('-') 
-        ? projectName.split('-')[0] 
-        : projectName;
-      
-      // Костыль: в GitLab проект называется SPS, а в Jira - SPPDEV
-      // Поэтому нужно преобразовать SPS -> SPPDEV для запросов к Jira
-      if (projectKey === 'SPS') {
-        return 'SPPDEV';
-      }
-      
-      return projectKey;
-    };
-
     // Получаем ключ проекта из выбранного проекта
     const selectedProjectKey = computed(() => {
-      if (!selectedProjectId.value || !settings.value.gitlabUrls) return 'SPPDEV';
+      if (!selectedProjectId.value || !settings.value.gitlabUrls) return DEFAULT_PROJECT_KEY;
       
       const urlData = settings.value.gitlabUrls.find(
         url => url.url === selectedGitlabUrl.value
       );
-      if (!urlData || !urlData.projects) return 'SPPDEV';
+      if (!urlData || !urlData.projects) return DEFAULT_PROJECT_KEY;
       
       const project = urlData.projects.find(
         proj => proj.id === selectedProjectId.value
       );
-      if (!project || !project.name) return 'SPPDEV';
+      if (!project || !project.name) return DEFAULT_PROJECT_KEY;
       
       return extractProjectKey(project.name);
     });
@@ -250,13 +235,13 @@ export default {
       if (!branches || branches.length === 0) return;
 
       // Ищем ветку "master" для sourceBranch (только если ещё не выбрана)
-      if (!sourceBranch.value && branches.includes('master')) {
-        sourceBranch.value = 'master';
+      if (!sourceBranch.value && branches.includes(DEFAULT_SOURCE_BRANCH)) {
+        sourceBranch.value = DEFAULT_SOURCE_BRANCH;
       }
 
       // Ищем ветку "release" для targetBranch (только если ещё не выбрана)
-      if (!targetBranch.value && branches.includes('release')) {
-        targetBranch.value = 'release';
+      if (!targetBranch.value && branches.includes(DEFAULT_TARGET_BRANCH)) {
+        targetBranch.value = DEFAULT_TARGET_BRANCH;
       }
     });
 
@@ -296,7 +281,7 @@ export default {
         settings.value = await tasksStore.fetchSettings();
         tasksStore.subscribeToTaskStatus();
         // Загружаем патчи из Jira с ключом проекта по умолчанию
-        await tasksStore.fetchPatches('SPPDEV');
+        await tasksStore.fetchPatches(DEFAULT_PROJECT_KEY);
       } catch (error) {
         console.error('Error loading settings:', error);
       } finally {

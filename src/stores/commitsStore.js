@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import api from '@/services/api';
 import { showNotification } from '@/services/notificationService';
 import i18n from '@/i18n';
+import { DEFAULT_PROJECT_KEY } from '@/utils/constants';
 
 export const useTasksStore = defineStore('tasksStore', {
   state: () => ({
@@ -28,7 +29,7 @@ export const useTasksStore = defineStore('tasksStore', {
       }
     },
 
-    async fetchPatches(projectKey = 'SPPDEV') {
+    async fetchPatches(projectKey = DEFAULT_PROJECT_KEY) {
       if (!projectKey) {
         this.patches = [];
         return;
@@ -61,6 +62,28 @@ export const useTasksStore = defineStore('tasksStore', {
       }
     },
 
+    /**
+     * Приватный метод для обработки ответа с задачами
+     * Преобразует releaseTasks в Map и объединяет с masterTasks
+     * @param {Array} masterTasks - Массив задач из master ветки
+     * @param {Array} releaseTasks - Массив задач из release ветки
+     * @returns {Array} Обработанный массив задач с добавленными releaseCommits
+     */
+    _processTasksResponse(masterTasks, releaseTasks) {
+      const releaseTasksMap = new Map();
+      releaseTasks.forEach((task) => {
+        const commitsArray = task.commits && typeof task.commits === 'object' && !Array.isArray(task.commits)
+          ? Object.values(task.commits)
+          : (Array.isArray(task.commits) ? task.commits : []);
+        releaseTasksMap.set(task.key, commitsArray);
+      });
+    
+      return masterTasks.map((task) => ({
+        ...task,
+        releaseCommits: releaseTasksMap.get(task.key) || [],
+      }));
+    },
+
     async fetchRecentMRs(gitlabUrl, projectId, sourceBranch, targetBranch, mrCount) {
       this.loading = true;
       this.error = null;
@@ -76,19 +99,7 @@ export const useTasksStore = defineStore('tasksStore', {
         
         const masterTasks = response.data.masterTasks;
         const releaseTasks = response.data.releaseTasks;
-    
-        const releaseTasksMap = new Map();
-        releaseTasks.forEach((task) => {
-          const commitsArray = task.commits && typeof task.commits === 'object' && !Array.isArray(task.commits)
-            ? Object.values(task.commits)
-            : (Array.isArray(task.commits) ? task.commits : []);
-          releaseTasksMap.set(task.key, commitsArray);
-        });
-    
-        this.masterTasks = masterTasks.map((task) => ({
-          ...task,
-          releaseCommits: releaseTasksMap.get(task.key) || [],
-        }));
+        this.masterTasks = this._processTasksResponse(masterTasks, releaseTasks);
       } catch (error) {
         const errorMessage = error.response?.data?.errorMessage || error.message || 'Неизвестная ошибка';
         this.error = `Ошибка получения последних MR: ${errorMessage}`;
@@ -110,20 +121,7 @@ export const useTasksStore = defineStore('tasksStore', {
         const response = await api.post('/api/commits', payload);
         const masterTasks = response.data.masterTasks;
         const releaseTasks = response.data.releaseTasks;
-    
-        const releaseTasksMap = new Map();
-        releaseTasks.forEach((task) => {
-          // Преобразуем commits из Map в массив
-          const commitsArray = task.commits && typeof task.commits === 'object' && !Array.isArray(task.commits)
-            ? Object.values(task.commits)
-            : (Array.isArray(task.commits) ? task.commits : []);
-          releaseTasksMap.set(task.key, commitsArray);
-        });
-    
-        this.masterTasks = masterTasks.map((task) => ({
-          ...task,
-          releaseCommits: releaseTasksMap.get(task.key) || [],
-        }));
+        this.masterTasks = this._processTasksResponse(masterTasks, releaseTasks);
       } catch (error) {
         const errorMessage = error.response?.data?.errorMessage || error.message || 'Неизвестная ошибка';
         this.error = `Ошибка получения коммитов: ${errorMessage}`;
