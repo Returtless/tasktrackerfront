@@ -151,32 +151,42 @@ export const useTasksStore = defineStore('tasksStore', {
           return;
         }
     
-        const task = this.masterTasks.find((task) => task.key === payload.taskKey);
-        if (task) {
+        // Находим все задачи, которые содержат этот MR
+        const tasksWithThisMr = this.masterTasks.filter((task) => {
+          if (!task.commits) return false;
+          return Object.values(task.commits).some((commit) => 
+            commit && commit.mrNumber === payload.mrNumber
+          );
+        });
+
+        if (tasksWithThisMr.length > 0) {
           // Преобразуем Map в массив для корректного использования spread
           const commitsToAdd = Array.isArray(taskInfo.commits)
             ? taskInfo.commits
             : Object.values(taskInfo.commits || {});
 
-          // Убеждаемся, что releaseCommits существует и является массивом
-          // (может быть объектом Map, если данные пришли напрямую с бэкенда)
-          if (!task.releaseCommits) {
-            task.releaseCommits = [];
-          } else if (!Array.isArray(task.releaseCommits)) {
-            // Если это объект (Map), преобразуем в массив
-            task.releaseCommits = Object.values(task.releaseCommits);
-          }
-          task.releaseCommits.push(...commitsToAdd);
+          // Обновляем все задачи, которые содержат этот MR
+          tasksWithThisMr.forEach((task) => {
+            // Убеждаемся, что releaseCommits существует и является массивом
+            // (может быть объектом Map, если данные пришли напрямую с бэкенда)
+            if (!task.releaseCommits) {
+              task.releaseCommits = [];
+            } else if (!Array.isArray(task.releaseCommits)) {
+              // Если это объект (Map), преобразуем в массив
+              task.releaseCommits = Object.values(task.releaseCommits);
+            }
+            task.releaseCommits.push(...commitsToAdd);
 
-          // Помечаем исходный коммит как перенесённый, чтобы скрыть кнопку Cherry-pick
-          if (task.commits) {
-            Object.values(task.commits).forEach((commit) => {
-              if (commit && commit.mrNumber === payload.mrNumber) {
-                commit.transferred = true;
-              }
-            });
-          }
-    
+            // Помечаем исходный коммит как перенесённый, чтобы скрыть кнопку Cherry-pick
+            if (task.commits) {
+              Object.values(task.commits).forEach((commit) => {
+                if (commit && commit.mrNumber === payload.mrNumber) {
+                  commit.transferred = true;
+                }
+              });
+            }
+          });
+
           showNotification({
             title: i18n.t('notifications.success'),
             text: i18n.t('notifications.cherryPickCompleted', { mrNumber: payload.mrNumber }),

@@ -2,11 +2,11 @@
   <!-- Режим сортировки по MR number -->
   <div
     v-if="sortMode === 'mr'"
-    :key="`card-${item.task.key}-${item.commit.mrNumber}`"
+    :key="`card-${item.mrNumber}`"
     class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
     <!-- Заголовок: Issue Key + Improvement Status + Checkbox -->
     <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
         <input
           v-if="!item.commit.transferred"
           type="checkbox"
@@ -15,17 +15,23 @@
           class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
         />
         <button
-          @click="openLink(`${jiraBrowseUrl}${item.task.key}`)"
+          v-for="task in item.tasks"
+          :key="task.key"
+          @click="openLink(`${jiraBrowseUrl}${task.key}`)"
           class="bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 text-xs font-medium">
-          {{ item.task.key }}
+          {{ task.key }}
         </button>
       </div>
-      <span
-        v-if="getStatusIcon(item.task.status)"
-        class="text-xl"
-        :title="(item.task.status || '') + (item.task.improvementName ? ' - ' + item.task.improvementName : '')">
-        {{ getStatusIcon(item.task.status) }}
-      </span>
+      <div class="flex items-center gap-1 flex-wrap">
+        <template v-for="task in item.tasks" :key="task.key">
+          <span
+            v-if="getStatusIcon(task.status)"
+            class="text-xl"
+            :title="(task.status || '') + (task.improvementName ? ' - ' + task.improvementName : '')">
+            {{ getStatusIcon(task.status) }}
+          </span>
+        </template>
+      </div>
     </div>
     <!-- Source Commits -->
     <div class="mb-3">
@@ -48,7 +54,7 @@
         <button
           v-if="!item.commit.transferred"
           :disabled="tasksStore.loadingButtons.has(item.commit.mrNumber)"
-          @click="$emit('cherry-pick-request', item.commit.mrNumber, item.task.key)"
+          @click="$emit('cherry-pick-request', item.commit.mrNumber, item.tasks[0]?.key)"
           :title="tasksStore.loadingButtons.has(item.commit.mrNumber) ? $t('common.processing') : $t('commitsTable.cherryPick')"
           class="w-8 h-8 rounded text-white flex items-center justify-center flex-shrink-0"
           :class="[
@@ -60,18 +66,21 @@
     </div>
     <!-- Target Commits -->
     <div
-      v-if="item.task.releaseCommits && Object.values(item.task.releaseCommits).some(rc => rc?.mrNumber === item.commit.mrNumber)"
+      v-if="targetCommit"
       class="mb-3">
       <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">{{ $t('commitsTable.targetCommits') }}</div>
       <div class="flex items-center gap-2 flex-wrap">
-        <template v-for="releaseCommit in Object.values(item.task.releaseCommits)" :key="releaseCommit?.mrNumber">
-          <button
-            v-if="releaseCommit?.mrNumber === item.commit.mrNumber"
-            @click="openLink(releaseCommit.url)"
-            class="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-600">
-            MR {{ releaseCommit?.mrNumber }}
-          </button>
-        </template>
+        <button
+          @click="openLink(targetCommit.url)"
+          class="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-600">
+          MR {{ targetCommit?.mrNumber }}
+        </button>
+        <button
+          v-if="targetCommit?.commit?.webUrl"
+          @click="openLink(targetCommit.commit.webUrl)"
+          class="bg-purple-500 text-white w-6 h-6 rounded flex items-center justify-center text-xs hover:bg-purple-600">
+          🔗
+        </button>
       </div>
     </div>
     <!-- Author + Date -->
@@ -80,7 +89,7 @@
         👤 {{ item.commit?.commit?.authorEmail?.split('@')[0] || $t('common.unknown') }}
       </span>
       <span class="text-gray-500 dark:text-gray-400">
-        📅 {{ getDisplayDateForTask(item.task) ? formatDateCompact(getDisplayDateForTask(item.task), $t) : $t('common.notAvailable') }}
+        📅 {{ item.tasks.length > 0 && getDisplayDateForTask(item.tasks[0]) ? formatDateCompact(getDisplayDateForTask(item.tasks[0]), $t) : $t('common.notAvailable') }}
       </span>
     </div>
   </div>
@@ -156,22 +165,23 @@
       </div>
     </div>
     <!-- Target Commits -->
-    <div v-if="task.releaseCommits && Object.values(task.releaseCommits).length > 0" class="mb-3">
+    <div v-if="task.commits && filteredCommits(task.commits).some(c => c?.matchedReleaseCommit)" class="mb-3">
       <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">{{ $t('commitsTable.targetCommits') }}</div>
       <div class="flex items-center gap-2 flex-wrap">
-        <template v-for="(commit, idx) in Object.values(task.releaseCommits)" :key="commit?.mrNumber || idx">
-          <button
-            v-if="commit?.mrNumber"
-            @click="openLink(commit.url)"
-            class="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-600">
-            MR {{ commit?.mrNumber }}
-          </button>
-          <button
-            v-if="commit?.commit?.webUrl"
-            @click="openLink(commit.commit.webUrl)"
-            class="bg-purple-500 text-white w-6 h-6 rounded flex items-center justify-center text-xs hover:bg-purple-600">
-            🔗
-          </button>
+        <template v-for="(commit, idx) in filteredCommits(task.commits)" :key="commit?.mrNumber || idx">
+          <template v-if="commit?.matchedReleaseCommit">
+            <button
+              @click="openLink(commit.matchedReleaseCommit.url)"
+              class="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-600">
+              MR {{ commit.matchedReleaseCommit?.mrNumber }}
+            </button>
+            <button
+              v-if="commit.matchedReleaseCommit?.commit?.webUrl"
+              @click="openLink(commit.matchedReleaseCommit.commit.webUrl)"
+              class="bg-purple-500 text-white w-6 h-6 rounded flex items-center justify-center text-xs hover:bg-purple-600">
+              🔗
+            </button>
+          </template>
         </template>
       </div>
     </div>
@@ -223,12 +233,39 @@ export default {
     }
   },
   emits: ['toggle-commit-selection', 'toggle-task-selection', 'cherry-pick-request'],
+  computed: {
+    targetCommit() {
+      if (this.sortMode === 'mr' && this.item) {
+        console.log('=== COMPUTED targetCommit (Card) called ===');
+        const result = this.getTargetCommitForMr(this.item);
+        console.log('=== COMPUTED targetCommit (Card) result:', result);
+        return result;
+      }
+      return null;
+    }
+  },
   methods: {
     getDisplayDateForTask,
     formatDateCompact,
     getStatusIcon,
     openLink(url) {
       window.open(url, '_blank');
+    },
+    normalizeMrNumber(mrNumber) {
+      if (mrNumber === null || mrNumber === undefined || mrNumber === '') {
+        return '';
+      }
+      // Приводим к строке, обрезаем пробелы, затем к числу и обратно к строке для единообразия
+      const str = String(mrNumber).trim();
+      const num = parseInt(str, 10);
+      return isNaN(num) ? str : String(num);
+    },
+    getTargetCommitForMr(item) {
+      // Используем matchedReleaseCommit из item.commit (привязка с бэкенда)
+      if (item.commit?.matchedReleaseCommit) {
+        return item.commit.matchedReleaseCommit;
+      }
+      return null;
     }
   }
 };

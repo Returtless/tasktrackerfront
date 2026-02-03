@@ -43,7 +43,7 @@
                 <template v-if="isMrNumberSortActive">
                     <CommitCard
                         v-for="item in flattenedMrList"
-                        :key="`card-${item.task.key}-${item.commit.mrNumber}`"
+                        :key="`card-mr-${item.mrNumber}`"
                         :item="item"
                         :tasks-store="tasksStore"
                         :jira-browse-url="jiraBrowseUrl"
@@ -90,7 +90,7 @@
                     <template v-if="isMrNumberSortActive">
                         <CommitRow
                             v-for="item in flattenedMrList"
-                            :key="`${item.task.key}-${item.commit.mrNumber}`"
+                            :key="`mr-${item.mrNumber}`"
                             :item="item"
                             :tasks-store="tasksStore"
                             :jira-browse-url="jiraBrowseUrl"
@@ -180,8 +180,8 @@ export default {
             return this.currentSortDirection !== null;
         },
         flattenedMrList() {
-            // Создаем плоский список всех MR из всех задач
-            const mrList = [];
+            // Группируем MR по номеру, собирая все связанные задачи
+            const mrMap = new Map(); // Map<mrNumber, {mrNumber, commit, tasks: []}>
             
             let tasksToProcess = this.hideWithTargetCommits
                 ? this.filteredTasksWithoutTargetCommits.filter(task => {
@@ -204,7 +204,7 @@ export default {
                 });
             }
 
-            // Разворачиваем все задачи в плоский список MR
+            // Группируем по mrNumber
             tasksToProcess.forEach(task => {
                 if (!task.commits) return;
                 
@@ -214,19 +214,40 @@ export default {
                     // Проверяем наличие mrNumber (может быть строкой или числом)
                     const mrNum = commit?.mrNumber;
                     if (mrNum !== null && mrNum !== undefined && mrNum !== '') {
-                        const mrNumberInt = typeof mrNum === 'number' ? mrNum : parseInt(mrNum);
+                        // Нормализуем MR number: приводим к строке, затем к числу для сравнения
+                        const mrNumberStr = String(mrNum).trim();
+                        const mrNumberInt = parseInt(mrNumberStr, 10);
                         if (!isNaN(mrNumberInt) && mrNumberInt > 0) {
-                            mrList.push({
-                                commit: commit,
-                                task: task,
-                                mrNumber: mrNumberInt
-                            });
+                            if (!mrMap.has(mrNumberInt)) {
+                                mrMap.set(mrNumberInt, {
+                                    mrNumber: mrNumberInt,
+                                    commit: commit,
+                                    tasks: []
+                                });
+                            }
+                            // Добавляем задачу, если её еще нет в списке
+                            const mrData = mrMap.get(mrNumberInt);
+                            if (!mrData.tasks.find(t => t.key === task.key)) {
+                                mrData.tasks.push(task);
+                            }
                         }
                     }
                 });
             });
 
-            // Сортируем по номеру MR (flattenedMrList используется только когда сортировка включена)
+            // Преобразуем в массив и добавляем allTaskKeys
+            const mrList = Array.from(mrMap.values()).map(item => {
+                console.log('Creating MR item:', item.mrNumber, 'tasks:', item.tasks);
+                item.tasks.forEach(task => {
+                    console.log('  Task:', task.key, 'releaseCommits:', task.releaseCommits);
+                });
+                return {
+                    ...item,
+                    allTaskKeys: item.tasks.map(t => t.key).join(', ')
+                };
+            });
+
+            // Сортируем по номеру MR
             const sortDirectionValue = this.currentSortDirection || 'asc';
             mrList.sort((a, b) => {
                 return sortDirectionValue === 'asc' ? a.mrNumber - b.mrNumber : b.mrNumber - a.mrNumber;

@@ -33,11 +33,11 @@
           <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.selectionMode') }}</label>
           <div class="flex items-center gap-4">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" :value="'patch'" :modelValue="selectionMode" @change="$emit('update:selection-mode', 'patch')" :class="radioClasses" />
+              <input type="radio" name="selection-mode" value="patch" :checked="selectionMode === 'patch'" @change="$emit('update:selection-mode', 'patch')" :class="radioClasses" />
               <span :class="labelClasses">{{ $t('toolbar.patch') }}</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" :value="'recentMR'" :modelValue="selectionMode" @change="$emit('update:selection-mode', 'recentMR')" :class="radioClasses" />
+              <input type="radio" name="selection-mode" value="recentMR" :checked="selectionMode === 'recentMR'" @change="$emit('update:selection-mode', 'recentMR')" :class="radioClasses" />
               <span :class="labelClasses">MR</span>
             </label>
           </div>
