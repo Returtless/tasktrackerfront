@@ -33,12 +33,26 @@
           <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.selectionMode') }}</label>
           <div class="flex items-center gap-4">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="selection-mode" value="patch" :checked="selectionMode === 'patch'" @change="$emit('update:selection-mode', 'patch')" :class="radioClasses" />
-              <span :class="labelClasses">{{ $t('toolbar.patch') }}</span>
+              <input 
+                type="radio" 
+                name="selection-mode" 
+                value="patch" 
+                :checked="selectionMode === 'patch'" 
+                @change="updateSelectionMode('patch')"
+                @click="updateSelectionMode('patch')"
+                :class="radioClasses" />
+              <span :class="labelClasses" @click="updateSelectionMode('patch')">{{ $t('toolbar.patch') }}</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="selection-mode" value="recentMR" :checked="selectionMode === 'recentMR'" @change="$emit('update:selection-mode', 'recentMR')" :class="radioClasses" />
-              <span :class="labelClasses">MR</span>
+              <input 
+                type="radio" 
+                name="selection-mode" 
+                value="recentMR" 
+                :checked="selectionMode === 'recentMR'" 
+                @change="updateSelectionMode('recentMR')"
+                @click="updateSelectionMode('recentMR')"
+                :class="radioClasses" />
+              <span :class="labelClasses" @click="updateSelectionMode('recentMR')">MR</span>
             </label>
           </div>
         </div>
@@ -137,6 +151,15 @@ export default {
     }
   },
   emits: ['toggle-menu', 'update:selection-mode', 'update:patch-number', 'update:mr-count', 'update:force-refresh'],
+  methods: {
+    updateSelectionMode(mode) {
+      if (this.selectionMode !== mode) {
+        this.$emit('update:selection-mode', mode);
+        // Принудительно обновляем компонент
+        this.$forceUpdate();
+      }
+    }
+  },
   computed: {
     buttonClasses() {
       const base = 'flex items-center gap-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500';

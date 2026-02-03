@@ -177,11 +177,18 @@ export const useTasksStore = defineStore('tasksStore', {
             }
             task.releaseCommits.push(...commitsToAdd);
 
-            // Помечаем исходный коммит как перенесённый, чтобы скрыть кнопку Cherry-pick
+            // Помечаем исходный коммит как перенесённый и устанавливаем matchedReleaseCommit
             if (task.commits) {
               Object.values(task.commits).forEach((commit) => {
                 if (commit && commit.mrNumber === payload.mrNumber) {
                   commit.transferred = true;
+                  // Устанавливаем matchedReleaseCommit на первый созданный коммит
+                  // (обычно cherry-pick создает один коммит, но может быть несколько)
+                  if (commitsToAdd.length > 0) {
+                    // Находим коммит с тем же MR number или берем первый
+                    const matchedCommit = commitsToAdd.find(c => c.mrNumber === commit.mrNumber) || commitsToAdd[0];
+                    commit.matchedReleaseCommit = matchedCommit;
+                  }
                 }
               });
             }

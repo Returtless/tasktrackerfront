@@ -53,21 +53,34 @@
                         @cherry-pick-request="handleCherryPickRequest"
                     />
                 </template>
-                <!-- Обычный режим: группировка по задачам -->
-                <template v-else>
-                    <CommitCard
-                        v-for="task in localFilteredTasks"
-                        :key="`card-${task.key}`"
-                        :task="task"
-                        :tasks-store="tasksStore"
-                        :jira-browse-url="jiraBrowseUrl"
-                        sort-mode="normal"
-                        :filtered-commits="filteredCommits"
-                        @toggle-commit-selection="$emit('toggle-commit-selection', $event)"
-                        @toggle-task-selection="$emit('toggle-task-selection', $event)"
-                        @cherry-pick-request="handleCherryPickRequest"
-                    />
-                </template>
+                    <!-- Обычный режим: группировка по задачам (с группировкой по MR если несколько задач) -->
+                    <template v-else>
+                        <template v-for="item in localFilteredTasks" :key="item._isGrouped ? `card-mr-${item.mrNumber}` : `card-${item.key}`">
+                            <!-- Если это сгруппированный MR (несколько задач с одним MR) -->
+                            <CommitCard
+                                v-if="item._isGrouped"
+                                :item="item"
+                                :tasks-store="tasksStore"
+                                :jira-browse-url="jiraBrowseUrl"
+                                sort-mode="mr"
+                                :filtered-commits="filteredCommits"
+                                @toggle-commit-selection="$emit('toggle-commit-selection', $event)"
+                                @cherry-pick-request="handleCherryPickRequest"
+                            />
+                            <!-- Обычная задача (без группировки) -->
+                            <CommitCard
+                                v-else
+                                :task="item"
+                                :tasks-store="tasksStore"
+                                :jira-browse-url="jiraBrowseUrl"
+                                sort-mode="normal"
+                                :filtered-commits="filteredCommits"
+                                @toggle-commit-selection="$emit('toggle-commit-selection', $event)"
+                                @toggle-task-selection="$emit('toggle-task-selection', $event)"
+                                @cherry-pick-request="handleCherryPickRequest"
+                            />
+                        </template>
+                    </template>
             </div>
 
             <!-- Таблица с зафиксированным thead (скрыта на мобильных) -->
@@ -100,19 +113,32 @@
                             @cherry-pick-request="handleCherryPickRequest"
                         />
                     </template>
-                    <!-- Обычный режим: группировка по задачам -->
+                    <!-- Обычный режим: группировка по задачам (с группировкой по MR если несколько задач) -->
                     <template v-else>
-                        <CommitRow
-                            v-for="task in localFilteredTasks"
-                            :key="task.key"
-                            :task="task"
-                            :tasks-store="tasksStore"
-                            :jira-browse-url="jiraBrowseUrl"
-                            sort-mode="normal"
-                            :filtered-commits="filteredCommits"
-                            @toggle-commit-selection="$emit('toggle-commit-selection', $event)"
-                            @cherry-pick-request="handleCherryPickRequest"
-                        />
+                        <template v-for="item in localFilteredTasks" :key="item._isGrouped ? `mr-${item.mrNumber}` : item.key">
+                            <!-- Если это сгруппированный MR (несколько задач с одним MR) -->
+                            <CommitRow
+                                v-if="item._isGrouped"
+                                :item="item"
+                                :tasks-store="tasksStore"
+                                :jira-browse-url="jiraBrowseUrl"
+                                sort-mode="mr"
+                                :filtered-commits="filteredCommits"
+                                @toggle-commit-selection="$emit('toggle-commit-selection', $event)"
+                                @cherry-pick-request="handleCherryPickRequest"
+                            />
+                            <!-- Обычная задача (без группировки) -->
+                            <CommitRow
+                                v-else
+                                :task="item"
+                                :tasks-store="tasksStore"
+                                :jira-browse-url="jiraBrowseUrl"
+                                sort-mode="normal"
+                                :filtered-commits="filteredCommits"
+                                @toggle-commit-selection="$emit('toggle-commit-selection', $event)"
+                                @cherry-pick-request="handleCherryPickRequest"
+                            />
+                        </template>
                     </template>
                 </tbody>
             </table>
@@ -261,6 +287,9 @@ export default {
                 return [];
             }
             
+            // В обычном режиме тоже группируем задачи по MR number, если у разных задач один MR
+            const mrMap = new Map(); // Map<mrNumber, {mrNumber, commit, tasks: []}>
+            
             let tasksToFilter = this.hideWithTargetCommits
                 ? this.filteredTasksWithoutTargetCommits.filter(task => {
                     // Фильтруем задачи, у которых есть хотя бы один коммит с transferred === false
@@ -282,7 +311,112 @@ export default {
                 });
             }
 
-            return tasksToFilter;
+            // Группируем задачи по MR number
+            tasksToFilter.forEach(task => {
+                if (!task.commits) return;
+                
+                const commitsArray = this.filteredCommits(task.commits);
+                commitsArray.forEach(commit => {
+                    const mrNum = commit?.mrNumber;
+                    if (mrNum !== null && mrNum !== undefined && mrNum !== '') {
+                        const mrNumberStr = String(mrNum).trim();
+                        const mrNumberInt = parseInt(mrNumberStr, 10);
+                        if (!isNaN(mrNumberInt) && mrNumberInt > 0) {
+                            if (!mrMap.has(mrNumberInt)) {
+                                mrMap.set(mrNumberInt, {
+                                    mrNumber: mrNumberInt,
+                                    commit: commit,
+                                    tasks: []
+                                });
+                            }
+                            const mrData = mrMap.get(mrNumberInt);
+                            if (!mrData.tasks.find(t => t.key === task.key)) {
+                                mrData.tasks.push(task);
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Преобразуем сгруппированные MR в плоский список, сохраняя исходный порядок по дате
+            // Если у MR несколько задач, показываем его как группу (используем структуру как в flattenedMrList)
+            const groupedItems = []; // Сгруппированные MR
+            const processedTasks = new Set();
+            
+            // Собираем сгруппированные MR (где несколько задач с одним MR)
+            mrMap.forEach((mrData, mrNumber) => {
+                if (mrData.tasks.length > 1) {
+                    // Несколько задач с одним MR - создаем группу
+                    // Используем максимальную дату из всех задач для сортировки
+                    const maxDate = mrData.tasks.reduce((max, task) => {
+                        const taskDate = this.getDisplayDateForTask(task);
+                        if (!taskDate) return max;
+                        if (!max) return taskDate;
+                        return taskDate > max ? taskDate : max;
+                    }, null);
+                    groupedItems.push({
+                        mrNumber: mrNumber,
+                        commit: mrData.commit,
+                        tasks: mrData.tasks,
+                        allTaskKeys: mrData.tasks.map(t => t.key).join(', '),
+                        _isGrouped: true,
+                        date: maxDate, // Добавляем дату для сортировки
+                        _originalIndex: tasksToFilter.findIndex(t => mrData.tasks.some(mt => mt.key === t.key)) // Сохраняем исходную позицию
+                    });
+                    mrData.tasks.forEach(t => processedTasks.add(t.key));
+                }
+            });
+            
+            // Создаем результат, сохраняя исходный порядок задач
+            // Заменяем сгруппированные задачи на группу в их исходной позиции
+            const result = [];
+            const groupedByFirstTaskKey = new Map(); // Map<firstTaskKey, groupedItem>
+            groupedItems.forEach(item => {
+                if (item.tasks.length > 0) {
+                    groupedByFirstTaskKey.set(item.tasks[0].key, item);
+                }
+            });
+            
+            tasksToFilter.forEach(task => {
+                if (processedTasks.has(task.key)) {
+                    // Эта задача входит в группу
+                    const groupedItem = groupedByFirstTaskKey.get(task.key);
+                    if (groupedItem && !result.some(r => r._isGrouped && r.mrNumber === groupedItem.mrNumber)) {
+                        // Добавляем группу только один раз (по первой задаче)
+                        result.push(groupedItem);
+                    }
+                } else {
+                    // Обычная задача (не сгруппированная)
+                    result.push(task);
+                }
+            });
+
+            // Сортируем по дате (как в режиме патча) - по убыванию (новые сверху)
+            result.sort((a, b) => {
+                let dateA = null;
+                let dateB = null;
+                
+                if (a._isGrouped) {
+                    dateA = a.date; // Уже Date объект из reduce выше
+                } else {
+                    dateA = this.getDisplayDateForTask(a);
+                }
+                
+                if (b._isGrouped) {
+                    dateB = b.date; // Уже Date объект из reduce выше
+                } else {
+                    dateB = this.getDisplayDateForTask(b);
+                }
+                
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1; // Элементы без даты в конец
+                if (!dateB) return -1; // Элементы без даты в конец
+                
+                // Сортировка по убыванию (новые сверху)
+                return dateB.getTime() - dateA.getTime();
+            });
+
+            return result;
         },
         isCherryPickDisabled() {
             return (
