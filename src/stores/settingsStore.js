@@ -249,6 +249,14 @@ export const useSettingsStore = defineStore('settingsStore', {
         return false;
       }
     },
+
+    reset() {
+      this.appSettings = {};
+      this.userSettings = {};
+      this.gitlabInstances = [];
+      this.isLoading = false;
+      this.isSyncing = false;
+    },
   },
 });
 

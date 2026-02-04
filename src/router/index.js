@@ -40,6 +40,15 @@ router.beforeEach(async (to, from, next) => {
       next('/');
       return;
     }
+    // Если переходим на login после logout, очищаем все stores
+    if (from.path !== '/login' && from.path !== '/') {
+      const { useTasksStore } = await import('@/stores/commitsStore');
+      const { useSettingsStore } = await import('@/stores/settingsStore');
+      const tasksStore = useTasksStore();
+      const settingsStore = useSettingsStore();
+      tasksStore.reset();
+      settingsStore.reset();
+    }
     next();
     return;
   }
@@ -52,6 +61,13 @@ router.beforeEach(async (to, from, next) => {
   // Если маршрут требует аутентификации
   if (to.meta.requiresAuth !== false) {
     if (!authStore.isAuthenticated) {
+      // Очищаем stores перед редиректом на login
+      const { useTasksStore } = await import('@/stores/commitsStore');
+      const { useSettingsStore } = await import('@/stores/settingsStore');
+      const tasksStore = useTasksStore();
+      const settingsStore = useSettingsStore();
+      tasksStore.reset();
+      settingsStore.reset();
       next('/login');
       return;
     }

@@ -44,6 +44,14 @@ export const useAuthStore = defineStore('authStore', {
 
     async login(username, password) {
       try {
+        // Очищаем stores перед входом нового пользователя
+        const { useTasksStore } = await import('./commitsStore');
+        const { useSettingsStore } = await import('./settingsStore');
+        const tasksStore = useTasksStore();
+        const settingsStore = useSettingsStore();
+        tasksStore.reset();
+        settingsStore.reset();
+        
         const response = await api.post('/api/auth/login', { username, password });
         if (response.data.success) {
           this.user = response.data.user;
@@ -106,20 +114,31 @@ export const useAuthStore = defineStore('authStore', {
 
     async logout() {
       try {
+        // Очищаем все stores перед logout
+        const { useTasksStore } = await import('./commitsStore');
+        const { useSettingsStore } = await import('./settingsStore');
+        const tasksStore = useTasksStore();
+        const settingsStore = useSettingsStore();
+        
+        // Сбрасываем состояния
+        tasksStore.reset();
+        settingsStore.reset();
+        
         await api.post('/api/auth/logout');
+      } catch (error) {
+        // Игнорируем ошибки при logout
+        console.warn('Logout error:', error);
+      } finally {
+        // Очищаем состояние аутентификации
         this.user = null;
         this.isAuthenticated = false;
+        
         router.push('/login');
         showNotification({
           title: i18n.t('notifications.success'),
           text: i18n.t('notifications.logoutSuccessful'),
           type: 'success',
         });
-      } catch (error) {
-        // Даже если ошибка, очищаем состояние
-        this.user = null;
-        this.isAuthenticated = false;
-        router.push('/login');
       }
     },
 

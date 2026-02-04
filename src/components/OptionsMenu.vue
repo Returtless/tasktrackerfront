@@ -31,29 +31,29 @@
         <!-- Selection Mode -->
         <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
           <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">{{ $t('toolbar.selectionMode') }}</label>
-          <div class="flex items-center gap-4">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="radio" 
-                name="selection-mode" 
-                value="patch" 
-                :checked="selectionMode === 'patch'" 
-                @change="updateSelectionMode('patch')"
-                @click="updateSelectionMode('patch')"
-                :class="radioClasses" />
-              <span :class="labelClasses" @click="updateSelectionMode('patch')">{{ $t('toolbar.patch') }}</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="radio" 
-                name="selection-mode" 
-                value="recentMR" 
-                :checked="selectionMode === 'recentMR'" 
-                @change="updateSelectionMode('recentMR')"
-                @click="updateSelectionMode('recentMR')"
-                :class="radioClasses" />
-              <span :class="labelClasses" @click="updateSelectionMode('recentMR')">MR</span>
-            </label>
+          <div class="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 p-1">
+            <button
+              @click="updateSelectionMode('patch')"
+              :class="[
+                'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                selectionMode === 'patch'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ]"
+            >
+              {{ $t('toolbar.patch') }}
+            </button>
+            <button
+              @click="updateSelectionMode('recentMR')"
+              :class="[
+                'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                selectionMode === 'recentMR'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ]"
+            >
+              MR
+            </button>
           </div>
         </div>
 
@@ -151,15 +151,6 @@ export default {
     }
   },
   emits: ['toggle-menu', 'update:selection-mode', 'update:patch-number', 'update:mr-count', 'update:force-refresh'],
-  methods: {
-    updateSelectionMode(mode) {
-      if (this.selectionMode !== mode) {
-        this.$emit('update:selection-mode', mode);
-        // Принудительно обновляем компонент
-        this.$forceUpdate();
-      }
-    }
-  },
   computed: {
     buttonClasses() {
       const base = 'flex items-center gap-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -196,9 +187,6 @@ export default {
         return `${base} left-0 right-0`;
       }
     },
-    radioClasses() {
-      return this.size === 'lg' ? 'w-3 h-3 text-blue-600' : 'w-4 h-4 text-blue-600';
-    },
     labelClasses() {
       return this.size === 'lg' ? 'text-xs text-gray-700 dark:text-gray-300' : 'text-sm text-gray-700 dark:text-gray-300';
     },
@@ -214,6 +202,13 @@ export default {
     },
     showCacheHint() {
       return this.size === 'xl';
+    }
+  },
+  methods: {
+    updateSelectionMode(mode) {
+      if (this.selectionMode !== mode) {
+        this.$emit('update:selection-mode', mode);
+      }
     }
   }
 };

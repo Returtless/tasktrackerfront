@@ -319,6 +319,19 @@ export const useTasksStore = defineStore('tasksStore', {
         eventSource.close();
       };
     },
+
+    reset() {
+      this.masterTasks = [];
+      this.loading = false;
+      this.loadingListButton = false;
+      this.selectedCommits = new Set();
+      this.selectedAuthors = [];
+      this.error = null;
+      this.loadingButtons = new Set();
+      this.taskStatuses = {};
+      this.patches = [];
+      this.patchesLoading = false;
+    },
   },
 
   getters: {
